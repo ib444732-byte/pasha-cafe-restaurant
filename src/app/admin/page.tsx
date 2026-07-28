@@ -24,7 +24,6 @@ import {
   CreditCard,
   Banknote,
   Award,
-  TrendingUp,
   Info,
   X,
   Phone,
@@ -191,7 +190,7 @@ export default function AdminPage() {
       .select("*, order_items(*)")
       .order("created_at", { ascending: false });
 
-    if (orderData) setOrders(orderData);
+    if (orderData) setOrders(orderData as Order[]);
   };
 
   const fetchProfiles = async () => {
@@ -353,13 +352,17 @@ export default function AdminPage() {
     return getLocalDateString(dateObj);
   };
 
-  // Tarih ve Saati Formatlama
-  const formatDateTime = (createdAtStr: string) => {
+  // Tarih ve Saati Formatlama (Güvenli Derleme)
+  const formatDateTime = (createdAtStr?: string) => {
     if (!createdAtStr) return { date: "-", time: "-" };
-    const d = new Date(createdAtStr);
-    const date = d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-    return { date, time };
+    try {
+      const d = new Date(createdAtStr);
+      const date = d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+      return { date, time };
+    } catch {
+      return { date: "-", time: "-" };
+    }
   };
 
   // TARİH HESAPLAMALARI
@@ -402,7 +405,7 @@ export default function AdminPage() {
     .filter((o) => o.payment_method?.toLowerCase().includes("kart") || o.payment_method?.toLowerCase().includes("pos"))
     .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
-  // --- ÜRÜN BAZLI SATIŞ ANALİZİ (SEÇİLEN TARİHE GÖRE) ---
+  // --- ÜRÜN BAZLI SATIŞ ANALİZİ ---
   const productSalesMap: { [title: string]: { quantity: number; revenue: number } } = {};
 
   selectedDateOrders.forEach((order) => {
@@ -433,7 +436,7 @@ export default function AdminPage() {
       if ("showPicker" in dateInputRef.current) {
         try {
           (dateInputRef.current as any).showPicker();
-        } catch (err) {
+        } catch {
           dateInputRef.current.focus();
         }
       } else {
@@ -562,7 +565,6 @@ export default function AdminPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(orderSubTab === "active" ? activeOrders : completedOrders).map((order) => {
-                  const dateTime = formatDateTime(order.created_at);
                   return (
                     <div
                       key={order.id}
@@ -604,9 +606,9 @@ export default function AdminPage() {
                           {/* DETAYLAR BUTONU */}
                           <button
                             onClick={() => setSelectedOrderDetails(order)}
-                            className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1"
+                            className="bg-pink-600/20 hover:bg-pink-600 text-pink-300 hover:text-white border border-pink-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1 shrink-0"
                           >
-                            <Info className="w-3.5 h-3.5 text-pink-400" /> Detaylar
+                            <Info className="w-3.5 h-3.5" /> Detaylar
                           </button>
 
                           <select
@@ -634,23 +636,20 @@ export default function AdminPage() {
         {activeTab === "analytics" && (
           <div className="space-y-6 max-w-5xl mx-auto">
             
-            {/* ÜST DÖNEMSEL CİRO ÖZET KARTLARI (BUGÜN, DÜN, BU AY) */}
+            {/* ÜST DÖNEMSEL CİRO ÖZET KARTLARI */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* BUGÜN */}
               <div className="bg-gradient-to-br from-pink-600 to-pink-700 p-5 rounded-3xl shadow-xl space-y-1 text-white border border-pink-500/30">
                 <span className="text-[11px] font-extrabold uppercase opacity-80 tracking-wider">Bugünün Cirosu</span>
                 <p className="text-2xl font-black">₺{todayRevenue.toFixed(2)}</p>
                 <p className="text-[10px] opacity-75">{todayStr} (Bugün Toplam)</p>
               </div>
 
-              {/* DÜN */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-1 text-white">
                 <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">Dünün Cirosu</span>
                 <p className="text-2xl font-black text-amber-400">₺{yesterdayRevenue.toFixed(2)}</p>
                 <p className="text-[10px] text-slate-500">{yesterdayStr}</p>
               </div>
 
-              {/* BU AY */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-1 text-white">
                 <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">Bu Ayın Toplamı</span>
                 <p className="text-2xl font-black text-blue-400">₺{thisMonthRevenue.toFixed(2)}</p>
@@ -669,7 +668,6 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              {/* TIKLANINCA TAKVİMİ DİREKT AÇAN BUTON */}
               <div 
                 onClick={openDatePicker}
                 className="flex items-center gap-3 bg-slate-950 border border-slate-800 hover:border-pink-500/50 px-4 py-3 rounded-2xl cursor-pointer transition shadow-inner group"
@@ -688,7 +686,6 @@ export default function AdminPage() {
 
             {/* SEÇİLEN TARİHİN DETAY KARTLARI */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* SEÇİLEN GÜN TOPLAM */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-2 text-white">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-400 uppercase">Seçilen Gün Toplam</span>
@@ -698,7 +695,6 @@ export default function AdminPage() {
                 <p className="text-[11px] text-slate-400">{selectedDateOrders.length} Adet Sipariş</p>
               </div>
 
-              {/* KAPIDA NAKİT */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-2 text-white">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-400 uppercase">Kapıda Nakit</span>
@@ -708,7 +704,6 @@ export default function AdminPage() {
                 <p className="text-[11px] text-slate-400">Nakit Tahsil Edilen</p>
               </div>
 
-              {/* KAPIDA KREDİ KARTI */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-2 text-white">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-400 uppercase">Kapıda POS / Kart</span>
@@ -719,7 +714,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* EN ÇOK SATAN ÜRÜNLER (ÜRÜN BAZLI SATIŞ ANALİZİ) */}
+            {/* EN ÇOK SATAN ÜRÜNLER */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
@@ -760,7 +755,6 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        {/* Görsel Oran Çubuğu */}
                         <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
                           <div 
                             className={`h-full rounded-full transition-all duration-500 ${
@@ -811,12 +805,11 @@ export default function AdminPage() {
                             </span>
                           </div>
 
-                          {/* ANALİZ SEKMESİ İÇİN DETAYLAR BUTONU */}
                           <button
                             onClick={() => setSelectedOrderDetails(order)}
-                            className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1"
+                            className="bg-pink-600/20 hover:bg-pink-600 text-pink-300 hover:text-white border border-pink-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1 shrink-0"
                           >
-                            <Info className="w-3.5 h-3.5 text-pink-500" /> Detaylar
+                            <Info className="w-3.5 h-3.5" /> Detaylar
                           </button>
                         </div>
                       </div>
@@ -1059,7 +1052,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">Sipariş Detay Dökümü</h3>
-                  <p className="text-[11px] text-slate-400">ID: #{selectedOrderDetails.id.substring(0, 8)}</p>
+                  <p className="text-[11px] text-slate-400">ID: #{selectedOrderDetails.id ? selectedOrderDetails.id.substring(0, 8) : "-"}</p>
                 </div>
               </div>
 
