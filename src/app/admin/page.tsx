@@ -8,7 +8,6 @@ import {
   Package,
   ShoppingCart,
   RefreshCw,
-  CheckCircle,
   Utensils,
   FolderPlus,
   Users,
@@ -88,14 +87,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [catLoading, setCatLoading] = useState(false);
   
-  // Seçili Sipariş Detay Modalı State'i
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
-
-  // Sekme Yönetimi
   const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics">("orders");
   const [orderSubTab, setOrderSubTab] = useState<"active" | "completed">("active");
 
-  // YEREL TARİHİ YYYY-MM-DD BİÇİMİNDE ALAN YARDIMCI
   const getLocalDateString = (d: Date = new Date()) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -105,7 +100,6 @@ export default function AdminPage() {
 
   const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
 
-  // Form State'leri
   const [newCategoryName, setNewCategoryName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -327,12 +321,12 @@ export default function AdminPage() {
     }
   };
 
-  // DURUM GÜNCELLEME
+  // SİPARİŞ DURUMUNU GÜNCELLEME (HAZIR DÜZELTİLDİ)
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
       .from("orders")
       .update({ 
-        status, 
+        status: status, 
         updated_at: new Date().toISOString()
       })
       .eq("id", orderId);
@@ -346,20 +340,18 @@ export default function AdminPage() {
 
   // Sipariş Filtreleri
   const activeOrders = orders.filter(
-    (o) => o.status === "bekliyor" || o.status === "hazirlaniyor" || o.status === "yolda"
+    (o) => o.status === "bekliyor" || o.status === "hazirlaniyor" || o.status === "hazir" || o.status === "yolda"
   );
   const completedOrders = orders.filter(
-    (o) => o.status === "teslim_edildi" || o.status === "iptal"
+    (o) => o.status === "teslim_edildi" || o.status === "iptal" || o.status === "iptal_edildi"
   );
 
-  // Tarih Karşılaştırması
   const getOrderLocalDate = (createdAtStr: string) => {
     if (!createdAtStr) return "";
     const dateObj = new Date(createdAtStr);
     return getLocalDateString(dateObj);
   };
 
-  // Tarih ve Saat Biçimlendirme
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return { date: "-", time: "-" };
     try {
@@ -372,7 +364,6 @@ export default function AdminPage() {
     }
   };
 
-  // TARİH HESAPLAMALARI
   const todayStr = getLocalDateString(new Date());
 
   const yesterdayObj = new Date();
@@ -381,7 +372,6 @@ export default function AdminPage() {
 
   const currentYearMonth = todayStr.substring(0, 7);
 
-  // Sadece Teslim Edilen Siparişler
   const deliveredOrders = orders.filter((o) => o.status === "teslim_edildi" && o.created_at);
 
   const todayRevenue = deliveredOrders
@@ -408,7 +398,6 @@ export default function AdminPage() {
     .filter((o) => o.payment_method?.toLowerCase().includes("kart") || o.payment_method?.toLowerCase().includes("pos"))
     .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
-  // --- ÜRÜN BAZLI SATIŞ ANALİZİ ---
   const productSalesMap: { [title: string]: { quantity: number; revenue: number } } = {};
 
   selectedDateOrders.forEach((order) => {
@@ -450,7 +439,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* BAŞLIK VE SEKME BUTONLARI */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div>
             <h1 className="text-2xl font-black text-pink-500 uppercase tracking-wide flex items-center gap-2">
@@ -566,7 +554,7 @@ export default function AdminPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(orderSubTab === "active" ? activeOrders : completedOrders).map((order) => {
-                  const isCompleted = order.status === "teslim_edildi" || order.status === "iptal";
+                  const isCompleted = order.status === "teslim_edildi" || order.status === "iptal" || order.status === "iptal_edildi";
 
                   return (
                     <div
@@ -586,14 +574,24 @@ export default function AdminPage() {
                               ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
                               : order.status === "hazirlaniyor"
                               ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                              : order.status === "hazir"
+                              ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
                               : order.status === "yolda"
                               ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                              : order.status === "iptal"
+                              : order.status === "iptal" || order.status === "iptal_edildi"
                               ? "bg-red-500/20 text-red-400 border-red-500/30"
                               : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                           }`}
                         >
-                          {order.status === "teslim_edildi" ? "TESLİM EDİLDİ" : order.status === "iptal" ? "İPTAL EDİLDİ" : order.status === "yolda" ? "YOLDA (KURYE ALDI)" : order.status}
+                          {order.status === "teslim_edildi"
+                            ? "TESLİM EDİLDİ"
+                            : order.status === "iptal" || order.status === "iptal_edildi"
+                            ? "İPTAL EDİLDİ"
+                            : order.status === "hazir"
+                            ? "HAZIR (KURYE BEKLENİYOR)"
+                            : order.status === "yolda"
+                            ? "YOLDA (KURYE ALDI)"
+                            : order.status}
                         </span>
                       </div>
 
@@ -608,7 +606,6 @@ export default function AdminPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {/* DETAYLAR BUTONU */}
                           <button
                             onClick={() => setSelectedOrderDetails(order)}
                             className="bg-pink-600/20 hover:bg-pink-600 text-pink-300 hover:text-white border border-pink-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1 shrink-0"
@@ -616,7 +613,6 @@ export default function AdminPage() {
                             <Info className="w-3.5 h-3.5" /> Detaylar
                           </button>
 
-                          {/* KİLİTLİ DURUM KONTROLÜ */}
                           {isCompleted ? (
                             <span
                               className={`text-[11px] font-extrabold px-3 py-2 rounded-xl border flex items-center gap-1 shrink-0 ${
@@ -643,7 +639,7 @@ export default function AdminPage() {
                             >
                               <option value="bekliyor">Bekliyor</option>
                               <option value="hazirlaniyor">Hazırlanıyor (Mutfakta)</option>
-                              <option value="hazirlaniyor">Hazır (Kurye Bekleniyor)</option>
+                              <option value="hazir">Hazır (Kurye Bekleniyor)</option>
                               <option value="teslim_edildi">Teslim Edildi (Tamamla)</option>
                               <option value="iptal">İptal Et</option>
                             </select>
@@ -1064,7 +1060,6 @@ export default function AdminPage() {
       {selectedOrderDetails && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 bg-pink-500/10 text-pink-500 rounded-xl flex items-center justify-center border border-pink-500/20">
@@ -1084,7 +1079,6 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* ZAMAN KARTLARI */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
               <div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
@@ -1105,9 +1099,9 @@ export default function AdminPage() {
                   ) : (
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
                   )}
-                  {selectedOrderDetails.status === "teslim_edildi" ? "Teslim Edilme Saati" : selectedOrderDetails.status === "iptal" ? "İptal Edilme Saati" : "Son Durum Saati"}
+                  {selectedOrderDetails.status === "teslim_edildi" ? "Teslim Edilme Saati" : selectedOrderDetails.status === "iptal" || selectedOrderDetails.status === "iptal_edildi" ? "İptal Edilme Saati" : "Son Durum Saati"}
                 </p>
-                <p className={`font-extrabold text-sm mt-0.5 ${selectedOrderDetails.status === "teslim_edildi" ? "text-emerald-400" : selectedOrderDetails.status === "iptal" ? "text-red-400" : "text-amber-400"}`}>
+                <p className={`font-extrabold text-sm mt-0.5 ${selectedOrderDetails.status === "teslim_edildi" ? "text-emerald-400" : selectedOrderDetails.status === "iptal" || selectedOrderDetails.status === "iptal_edildi" ? "text-red-400" : "text-amber-400"}`}>
                   {selectedOrderDetails.updated_at ? formatDateTime(selectedOrderDetails.updated_at).time : formatDateTime(selectedOrderDetails.created_at).time}
                   <span className="text-[10px] text-slate-400 font-normal block">
                     ({selectedOrderDetails.updated_at ? formatDateTime(selectedOrderDetails.updated_at).date : formatDateTime(selectedOrderDetails.created_at).date})
@@ -1116,7 +1110,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Müşteri ve Teslimat Bilgileri */}
             <div className="space-y-2 text-xs">
               <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 space-y-1">
                 <p className="font-bold text-white text-sm">{selectedOrderDetails.customer_name}</p>
@@ -1131,7 +1124,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Sipariş Edilen Ürünler */}
             <div className="space-y-2">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sipariş İçeriği</p>
               <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 space-y-2 max-h-36 overflow-y-auto">
@@ -1150,7 +1142,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Ödeme ve Tutar Özeti */}
             <div className="bg-gradient-to-r from-pink-900/30 to-purple-900/30 border border-pink-500/20 p-4 rounded-2xl flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-pink-300 uppercase font-bold">Ödeme Yöntemi</p>
