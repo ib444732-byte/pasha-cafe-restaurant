@@ -13,6 +13,8 @@ import {
   Volume2,
   VolumeX,
   RefreshCw,
+  Utensils,
+  Package,
 } from "lucide-react";
 
 interface OrderItem {
@@ -41,11 +43,25 @@ export default function CourierPage() {
   const [currentCourier, setCurrentCourier] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<"available" | "myOrders" | "history">("available");
-  const [audioAllowed, setAudioAudioAllowed] = useState(false);
+
+  // Ses İznini Tarayıcı Hafızasından (localStorage) Okuyalım
+  const [audioAllowed, setAudioAllowed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("courier_audio_enabled") === "true";
+    }
+    return false;
+  });
 
   useEffect(() => {
     checkCourierAuth();
   }, []);
+
+  const toggleAudio = (enable: boolean) => {
+    setAudioAllowed(enable);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("courier_audio_enabled", enable ? "true" : "false");
+    }
+  };
 
   const checkCourierAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -142,7 +158,7 @@ export default function CourierPage() {
     router.replace("/login");
   };
 
-  // ALINABİLİR SİPARİŞLER: Kuryeye henüz atanmamış ve tamamlanmamış/iptal olmamış TÜM siparişler
+  // ALINABİLİR SİPARİŞLER (Boştaki tüm siparişler)
   const availableOrders = orders.filter(
     (o) =>
       !o.courier_id &&
@@ -151,7 +167,7 @@ export default function CourierPage() {
       o.status !== "iptal_edildi"
   );
 
-  // ÜZERİMDEKİ SİPARİŞLER: Kuryenin aldığı ve hâlâ yolda olanlar
+  // ÜZERİMDEKİ SİPARİŞLER (Kuryenin üstüne aldığı yoldaki siparişler)
   const myActiveOrders = orders.filter(
     (o) => o.courier_id === currentCourier?.id && o.status === "yolda"
   );
@@ -160,6 +176,36 @@ export default function CourierPage() {
   const myCompletedOrders = orders.filter(
     (o) => o.courier_id === currentCourier?.id && (o.status === "teslim_edildi" || o.status === "iptal" || o.status === "iptal_edildi")
   );
+
+  // Sipariş Durum Rozeti Fonksiyonu
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case "bekliyor":
+        return (
+          <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-black px-2.5 py-1 rounded-md uppercase flex items-center gap-1">
+            <Clock className="w-3 h-3" /> YENİ SİPARİŞ
+          </span>
+        );
+      case "hazirlaniyor":
+        return (
+          <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-black px-2.5 py-1 rounded-md uppercase flex items-center gap-1">
+            <Utensils className="w-3 h-3" /> MUTFAKTA HAZIRLANIYOR
+          </span>
+        );
+      case "hazir":
+        return (
+          <span className="bg-teal-500/20 text-teal-400 border border-teal-500/30 text-[10px] font-black px-2.5 py-1 rounded-md uppercase flex items-center gap-1 animate-pulse">
+            <Package className="w-3 h-3" /> KURYEYE HAZIR
+          </span>
+        );
+      default:
+        return (
+          <span className="bg-slate-800 text-slate-300 text-[10px] font-black px-2.5 py-1 rounded-md uppercase">
+            {status}
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
@@ -179,7 +225,7 @@ export default function CourierPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setAudioAudioAllowed(!audioAllowed)}
+              onClick={() => toggleAudio(!audioAllowed)}
               className={`p-2.5 rounded-xl border transition ${
                 audioAllowed
                   ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -207,11 +253,12 @@ export default function CourierPage() {
           </div>
         </div>
 
+        {/* SES AÇMA BANNERI (Sadece ses kapalıysa gösterilir ve bir kez tıklanınca kalıcı kapanır) */}
         {!audioAllowed && (
           <div className="bg-purple-900/30 border border-purple-500/30 p-4 rounded-2xl flex items-center justify-between gap-3 text-xs">
-            <span className="text-purple-200">Yeni sipariş sesli uyarılarını aktifleştirmek için tıklayın:</span>
+            <span className="text-purple-200">Sipariş sesli uyarılarını kalıcı açmak için tıklayın:</span>
             <button
-              onClick={() => setAudioAudioAllowed(true)}
+              onClick={() => toggleAudio(true)}
               className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3.5 py-2 rounded-xl transition shrink-0"
             >
               Aktifleştir
@@ -272,9 +319,7 @@ export default function CourierPage() {
                         <Phone className="w-3 h-3 text-pink-500" /> {order.customer_phone}
                       </p>
                     </div>
-                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-black px-2.5 py-1 rounded-md uppercase">
-                      {order.status === "hazir" ? "HAZIR / ALINABİLİR" : order.status === "bekliyor" ? "BEKLİYOR" : "MUTFAKTA"}
-                    </span>
+                    <div>{renderStatusBadge(order.status)}</div>
                   </div>
 
                   <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800/80 text-xs text-slate-300 flex items-start gap-2">
