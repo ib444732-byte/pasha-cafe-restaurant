@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -54,6 +54,13 @@ export default function CourierPage() {
 
   useEffect(() => {
     checkCourierAuth();
+
+    // DÜZENLEME: Realtime bağlantısı yanında her 5 saniyede bir otomatik sessiz tarama yapalım (Sayfa yenilemeye gerek kalmaz)
+    const interval = setInterval(() => {
+      fetchCourierOrders();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const toggleAudio = (enable: boolean) => {
@@ -100,7 +107,7 @@ export default function CourierPage() {
 
   const subscribeToRealtimeOrders = () => {
     const channel = supabase
-      .channel("realtime-courier-orders")
+      .channel("courier-orders-realtime-channel")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
@@ -167,7 +174,7 @@ export default function CourierPage() {
       o.status !== "iptal_edildi"
   );
 
-  // ÜZERİMDEKİ SİPARİŞLER (Kuryenin üstüne aldığı yoldaki siparişler)
+  // ÜZERİMDEKİ SİPARİŞLER
   const myActiveOrders = orders.filter(
     (o) => o.courier_id === currentCourier?.id && o.status === "yolda"
   );
@@ -253,7 +260,7 @@ export default function CourierPage() {
           </div>
         </div>
 
-        {/* SES AÇMA BANNERI (Sadece ses kapalıysa gösterilir ve bir kez tıklanınca kalıcı kapanır) */}
+        {/* SES AÇMA BANNERI */}
         {!audioAllowed && (
           <div className="bg-purple-900/30 border border-purple-500/30 p-4 rounded-2xl flex items-center justify-between gap-3 text-xs">
             <span className="text-purple-200">Sipariş sesli uyarılarını kalıcı açmak için tıklayın:</span>
