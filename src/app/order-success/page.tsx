@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle2, Clock, MapPin, Phone, ShoppingBag, Utensils, Bike } from "lucide-react";
@@ -23,7 +23,8 @@ interface OrderDetail {
   created_at: string;
 }
 
-export default function OrderSuccessPage() {
+// 1. ASIL SİPARİŞ İÇERİĞİ (Tüm senin mantığın burada)
+function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const orderIdFromUrl = searchParams.get("id");
 
@@ -38,7 +39,7 @@ export default function OrderSuccessPage() {
     if (targetOrderId) {
       fetchOrderDetails(targetOrderId);
 
-      // Realtime Dinleyici: Admin durum değiştirdiğinde (Hazırlanıyor, Yolda vb.) canlı güncellensin
+      // Realtime Dinleyici: Admin durum değiştirdiğinde canlı güncellensin
       const channel = supabase
         .channel(`order-status-${targetOrderId}`)
         .on(
@@ -223,5 +224,23 @@ export default function OrderSuccessPage() {
 
       </div>
     </div>
+  );
+}
+
+// 2. VERCEL BUILD HATASINI ÇÖZEN ANA BİLEŞEN (Suspense sarmalı)
+export default function OrderSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
+          <div className="text-center space-y-3">
+            <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-xs text-slate-400 font-semibold">Sipariş detayı yükleniyor...</p>
+          </div>
+        </div>
+      }
+    >
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
