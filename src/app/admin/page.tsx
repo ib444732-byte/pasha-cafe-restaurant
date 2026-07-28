@@ -23,6 +23,8 @@ import {
   Wallet,
   CreditCard,
   Banknote,
+  Award,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -40,6 +42,13 @@ interface Product {
   image_url: string;
 }
 
+interface OrderItem {
+  id: string;
+  product_title: string;
+  quantity: number;
+  unit_price: number;
+}
+
 interface Order {
   id: string;
   customer_name: string;
@@ -49,6 +58,7 @@ interface Order {
   payment_method: string;
   status: string;
   created_at: string;
+  order_items?: OrderItem[];
 }
 
 interface Profile {
@@ -169,7 +179,7 @@ export default function AdminPage() {
   const fetchOrders = async () => {
     const { data: orderData } = await supabase
       .from("orders")
-      .select("*")
+      .select("*, order_items(*)")
       .order("created_at", { ascending: false });
 
     if (orderData) setOrders(orderData);
@@ -373,6 +383,31 @@ export default function AdminPage() {
   const selectedDateCardRevenue = selectedDateOrders
     .filter((o) => o.payment_method?.toLowerCase().includes("kart") || o.payment_method?.toLowerCase().includes("pos"))
     .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
+  // --- ÜRÜN BAZLI SATIŞ ANALİZİ (SEÇİLEN TARİHE GÖRE) ---
+  const productSalesMap: { [title: string]: { quantity: number; revenue: number } } = {};
+
+  selectedDateOrders.forEach((order) => {
+    if (order.order_items) {
+      order.order_items.forEach((item) => {
+        const title = item.product_title || "Bilinmeyen Ürün";
+        const qty = item.quantity || 1;
+        const rev = (item.unit_price || 0) * qty;
+
+        if (!productSalesMap[title]) {
+          productSalesMap[title] = { quantity: 0, revenue: 0 };
+        }
+        productSalesMap[title].quantity += qty;
+        productSalesMap[title].revenue += rev;
+      });
+    }
+  });
+
+  const sortedProductSales = Object.entries(productSalesMap)
+    .map(([title, stats]) => ({ title, ...stats }))
+    .sort((a, b) => b.quantity - a.quantity);
+
+  const maxSalesQuantity = sortedProductSales.length > 0 ? sortedProductSales[0].quantity : 1;
 
   // Takvim Açma Tetikleyicisi
   const openDatePicker = () => {
@@ -651,6 +686,63 @@ export default function AdminPage() {
                 <p className="text-2xl font-black text-purple-400">₺{selectedDateCardRevenue.toFixed(2)}</p>
                 <p className="text-[11px] text-slate-400">POS Cihazından Çekilen</p>
               </div>
+            </div>
+
+            {/* EN ÇOK SATAN ÜRÜNLER (ÜRÜN BAZLI SATIŞ ANALİZİ) */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-400" /> {selectedDate} Tarihli Ürün Satış Sıralaması (En Çok Satanlar)
+                </h3>
+                <span className="text-[11px] text-slate-500 font-medium">Toplam {sortedProductSales.length} Farklı Ürün Satıldı</span>
+              </div>
+
+              {sortedProductSales.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-500">
+                  Bu tarihte satılmış herhangi bir ürün kaydı bulunmuyor.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedProductSales.map((item, index) => {
+                    const percentage = Math.round((item.quantity / maxSalesQuantity) * 100);
+                    return (
+                      <div key={item.title} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                              index === 0 ? "bg-amber-500 text-slate-950" :
+                              index === 1 ? "bg-slate-300 text-slate-950" :
+                              index === 2 ? "bg-amber-700 text-white" : "bg-slate-800 text-slate-400"
+                            }`}>
+                              {index + 1}
+                            </span>
+                            <span className="font-bold text-white text-sm">{item.title}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-right">
+                            <span className="font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-xl text-xs">
+                              {item.quantity} Adet Satıldı
+                            </span>
+                            <span className="font-black text-pink-500 text-sm">
+                              ₺{item.revenue.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Görsel Oran Çubuğu */}
+                        <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              index === 0 ? "bg-amber-500" : "bg-pink-500"
+                            }`} 
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* SEÇİLEN TARİHE AİT SİPARİŞ LİSTESİ */}
