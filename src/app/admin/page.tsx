@@ -321,7 +321,6 @@ export default function AdminPage() {
     }
   };
 
-  // SİPARİŞ DURUMUNU GÜNCELLEME (HAZIR DÜZELTİLDİ)
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
       .from("orders")
@@ -338,7 +337,6 @@ export default function AdminPage() {
     }
   };
 
-  // Sipariş Filtreleri
   const activeOrders = orders.filter(
     (o) => o.status === "bekliyor" || o.status === "hazirlaniyor" || o.status === "hazir" || o.status === "yolda"
   );
@@ -439,6 +437,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
+        {/* BAŞLIK VE SEKME BUTONLARI */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div>
             <h1 className="text-2xl font-black text-pink-500 uppercase tracking-wide flex items-center gap-2">
@@ -640,7 +639,6 @@ export default function AdminPage() {
                               <option value="bekliyor">Bekliyor</option>
                               <option value="hazirlaniyor">Hazırlanıyor (Mutfakta)</option>
                               <option value="hazir">Hazır (Kurye Bekleniyor)</option>
-                              <option value="teslim_edildi">Teslim Edildi (Tamamla)</option>
                               <option value="iptal">İptal Et</option>
                             </select>
                           )}
