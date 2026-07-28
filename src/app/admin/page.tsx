@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -60,6 +60,7 @@ interface Profile {
 
 export default function AdminPage() {
   const router = useRouter();
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -69,21 +70,19 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [catLoading, setCatLoading] = useState(false);
   
-  // Sekme Yönetimi ("analytics" eklendi)
+  // Sekme Yönetimi
   const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics">("orders");
   const [orderSubTab, setOrderSubTab] = useState<"active" | "completed">("active");
 
-  // Yerel sistem tarihini YYYY-MM-DD formatında üreten yardımcı fonksiyon
-  const getTodayDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+  // YEREL TARİHİ YYYY-MM-DD BİÇİMİNDE ALAN YARDIMCI
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
-  // Analiz Sekmesi İçin Otomatik Bugünün Tarihi (Değiştirilebilir)
-  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
+  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
 
   // Form State'leri
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -328,54 +327,67 @@ export default function AdminPage() {
     (o) => o.status === "teslim_edildi" || o.status === "iptal"
   );
 
-  // YEREL TARİH FORMATLAYICI (YYYY-MM-DD)
-  const formatDateString = (dateStr: string) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+  // Tarih Karşılaştırması İçin UTC/Yerel Saat Dönüştürücüsü
+  const getOrderLocalDate = (createdAtStr: string) => {
+    if (!createdAtStr) return "";
+    const dateObj = new Date(createdAtStr);
+    return getLocalDateString(dateObj);
   };
 
-  const todayStr = getTodayDateString();
+  // TARİH HESAPLAMALARI
+  const todayStr = getLocalDateString(new Date());
 
-  const yesterdayDateObj = new Date();
-  yesterdayDateObj.setDate(yesterdayDateObj.getDate() - 1);
-  const yesterdayStr = `${yesterdayDateObj.getFullYear()}-${String(yesterdayDateObj.getMonth() + 1).padStart(2, "0")}-${String(yesterdayDateObj.getDate()).padStart(2, "0")}`;
+  const yesterdayObj = new Date();
+  yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+  const yesterdayStr = getLocalDateString(yesterdayObj);
 
   const currentYearMonth = todayStr.substring(0, 7); // "YYYY-MM"
 
-  // SADECE TESLİM EDİLMİŞ SİPARİŞLER
+  // Sadece Teslim Edilen Siparişler
   const deliveredOrders = orders.filter((o) => o.status === "teslim_edildi" && o.created_at);
 
   // 1. Bugünün Cirosu
   const todayRevenue = deliveredOrders
-    .filter((o) => formatDateString(o.created_at) === todayStr)
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    .filter((o) => getOrderLocalDate(o.created_at) === todayStr)
+    .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
   // 2. Dünün Cirosu
   const yesterdayRevenue = deliveredOrders
-    .filter((o) => formatDateString(o.created_at) === yesterdayStr)
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    .filter((o) => getOrderLocalDate(o.created_at) === yesterdayStr)
+    .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
   // 3. Bu Ayın Cirosu
   const thisMonthRevenue = deliveredOrders
-    .filter((o) => formatDateString(o.created_at).startsWith(currentYearMonth))
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    .filter((o) => getOrderLocalDate(o.created_at).startsWith(currentYearMonth))
+    .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
   // 4. Takvimden Seçilen Günün Siparişleri & Cirosu
   const selectedDateOrders = deliveredOrders.filter(
-    (o) => formatDateString(o.created_at) === selectedDate
+    (o) => getOrderLocalDate(o.created_at) === selectedDate
   );
 
-  const selectedDateTotalRevenue = selectedDateOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+  const selectedDateTotalRevenue = selectedDateOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const selectedDateCashRevenue = selectedDateOrders
     .filter((o) => o.payment_method?.toLowerCase().includes("nakit"))
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const selectedDateCardRevenue = selectedDateOrders
     .filter((o) => o.payment_method?.toLowerCase().includes("kart") || o.payment_method?.toLowerCase().includes("pos"))
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+
+  // Takvim Açma Tetikleyicisi
+  const openDatePicker = () => {
+    if (dateInputRef.current) {
+      if ("showPicker" in dateInputRef.current) {
+        try {
+          (dateInputRef.current as any).showPicker();
+        } catch (err) {
+          dateInputRef.current.focus();
+        }
+      } else {
+        dateInputRef.current.focus();
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
@@ -552,7 +564,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 2. SEKME: HESAPLAR / ANALİZ (İSTEKLERE GÖRE YENİLENDİ) */}
+        {/* 2. SEKME: HESAPLAR / ANALİZ */}
         {activeTab === "analytics" && (
           <div className="space-y-6 max-w-5xl mx-auto">
             
@@ -562,7 +574,7 @@ export default function AdminPage() {
               <div className="bg-gradient-to-br from-pink-600 to-pink-700 p-5 rounded-3xl shadow-xl space-y-1 text-white border border-pink-500/30">
                 <span className="text-[11px] font-extrabold uppercase opacity-80 tracking-wider">Bugünün Cirosu</span>
                 <p className="text-2xl font-black">₺{todayRevenue.toFixed(2)}</p>
-                <p className="text-[10px] opacity-75">{todayStr} (Canlı Tutar)</p>
+                <p className="text-[10px] opacity-75">{todayStr} (Bugün Toplam)</p>
               </div>
 
               {/* DÜN */}
@@ -580,36 +592,32 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* TARİH SEÇİCİ UST BAR (TAKVİM İKONUNA VEYA KUTUYA TIKLAYINCA DİREKT AÇILIR) */}
+            {/* TARİH SEÇİCİ UST BAR */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-pink-500" /> Detaylı Günlük Döküm
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Tarih seçerek o günün nakit ve kart detaylarını inceleyin
+                  Tarih seçerek istediğiniz günün nakit ve kart detaylarını inceleyin
                 </p>
               </div>
 
-              {/* TAKVİM YAPRAĞI İKONLU VE HER YERİ TIKLANABİLİR BÖLÜM */}
-              <label 
+              {/* TIKLANINCA TAKVİMİ DİREKT AÇAN BUTON */}
+              <div 
+                onClick={openDatePicker}
                 className="flex items-center gap-3 bg-slate-950 border border-slate-800 hover:border-pink-500/50 px-4 py-3 rounded-2xl cursor-pointer transition shadow-inner group"
-                onClick={(e) => {
-                  const inputEl = e.currentTarget.querySelector("input");
-                  if (inputEl && "showPicker" in inputEl) {
-                    try { (inputEl as any).showPicker(); } catch (err) {}
-                  }
-                }}
               >
                 <Calendar className="w-5 h-5 text-pink-500 group-hover:scale-110 transition shrink-0" />
                 <span className="text-xs font-bold text-slate-300">Tarih Seç:</span>
                 <input
+                  ref={dateInputRef}
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="bg-transparent text-xs text-white font-extrabold focus:outline-none cursor-pointer"
                 />
-              </label>
+              </div>
             </div>
 
             {/* SEÇİLEN TARİHİN DETAY KARTLARI */}
@@ -668,7 +676,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="text-right">
-                        <p className="text-sm font-black text-pink-500">₺{order.total_amount.toFixed(2)}</p>
+                        <p className="text-sm font-black text-pink-500">₺{Number(order.total_amount).toFixed(2)}</p>
                         <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md font-bold border border-emerald-500/30">
                           Teslim Edildi
                         </span>
