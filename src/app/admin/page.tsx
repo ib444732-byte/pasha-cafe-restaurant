@@ -63,6 +63,7 @@ interface Order {
   payment_method: string;
   status: string;
   created_at: string;
+  updated_at?: string;
   courier_id?: string | null;
   order_items?: OrderItem[];
 }
@@ -325,10 +326,14 @@ export default function AdminPage() {
     }
   };
 
+  // DURUM GÜNCELLEME VE TAMAMLANMA ZAMANINI (updated_at) KAYDETME
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
       .from("orders")
-      .update({ status })
+      .update({ 
+        status, 
+        updated_at: new Date().toISOString() // Tam güncellendiği/tamamlandığı anın saati
+      })
       .eq("id", orderId);
 
     if (error) {
@@ -353,7 +358,7 @@ export default function AdminPage() {
     return getLocalDateString(dateObj);
   };
 
-  // Tarih ve Saati Formatlama (Güvenli Derleme)
+  // Tarih ve Saati Formatlama
   const formatDateTime = (createdAtStr?: string) => {
     if (!createdAtStr) return { date: "-", time: "-" };
     try {
@@ -616,7 +621,7 @@ export default function AdminPage() {
                             <Info className="w-3.5 h-3.5" /> Detaylar
                           </button>
 
-                          {/* KİLİTLİ DURUM KONTROLÜ (GÖREVİ BİTEN SİPARİŞİ DEĞİŞTİRMEYİ ENGELLER) */}
+                          {/* KİLİTLİ DURUM KONTROLÜ */}
                           {isCompleted ? (
                             <span
                               className={`text-[11px] font-extrabold px-3 py-2 rounded-xl border flex items-center gap-1 shrink-0 ${
@@ -1090,23 +1095,24 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Tarih ve Zaman Kartı */}
+            {/* Tarih ve Zaman Kartları (Sipariş Saati ve Teslim/İptal Saati) */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
               <div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-pink-500" /> Sipariş Tarihi
+                  <Calendar className="w-3 h-3 text-pink-500" /> Sipariş Verilme Saati
                 </p>
                 <p className="font-extrabold text-slate-200 mt-0.5">
-                  {formatDateTime(selectedOrderDetails.created_at).date}
+                  {formatDateTime(selectedOrderDetails.created_at).time} <span className="text-[10px] text-slate-400 font-normal">({formatDateTime(selectedOrderDetails.created_at).date})</span>
                 </p>
               </div>
 
               <div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-pink-500" /> Sipariş Verilme Saati
+                  <Clock className="w-3 h-3 text-emerald-400" /> 
+                  {selectedOrderDetails.status === "teslim_edildi" ? "Teslim Edilme Saati" : selectedOrderDetails.status === "iptal" ? "İptal Edilme Saati" : "Son Güncelleme"}
                 </p>
-                <p className="font-extrabold text-pink-400 text-sm mt-0.5">
-                  {formatDateTime(selectedOrderDetails.created_at).time}
+                <p className={`font-extrabold text-sm mt-0.5 ${selectedOrderDetails.status === "teslim_edildi" ? "text-emerald-400" : selectedOrderDetails.status === "iptal" ? "text-red-400" : "text-amber-400"}`}>
+                  {selectedOrderDetails.updated_at ? formatDateTime(selectedOrderDetails.updated_at).time : "-"}
                 </p>
               </div>
             </div>
