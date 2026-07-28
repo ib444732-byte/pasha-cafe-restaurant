@@ -180,6 +180,7 @@ export default function Home() {
     setIsModalOpen(true);
   };
 
+  // SİPARİŞİ TAMAMLAMA (USER_ID VE YEREL HAFIZA KAYDI DÜZELTİLDİ)
   const handleCompleteOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -200,6 +201,7 @@ export default function Home() {
       .from("orders")
       .insert([
         {
+          user_id: currentUser.id, // 👉 KULLANICI ID'Sİ EKLENDİ!
           customer_name: customerName,
           customer_phone: customerPhone,
           delivery_address: deliveryAddress,
@@ -244,15 +246,18 @@ export default function Home() {
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     } catch {}
 
+    // 👉 YEREL HAFIZAYA SİPARİŞ İLE TELEFONUNU KAYDEDİYORUZ
     if (typeof window !== "undefined") {
       localStorage.setItem("last_order_id", orderData.id);
+      localStorage.setItem("last_order_phone", customerPhone);
     }
+
     router.push(`/order-success?id=${orderData.id}`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-28">
-      {/* ÜST BANNER VE RESTORAN BİLGİSİ (GENİŞLETİLMİŞ MAX-W-5XL) */}
+      {/* ÜST BANNER VE RESTORAN BİLGİSİ */}
       <div className="relative bg-slate-900 text-white overflow-hidden shadow-md">
         <div
           className="absolute inset-0 opacity-30 bg-cover bg-center scale-105"
@@ -264,7 +269,6 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40" />
 
         <div className="relative max-w-5xl mx-auto px-4 md:px-8 pt-8 pb-8 space-y-4">
-          {/* Rozet & Sağ Üst Butonlar */}
           <div className="flex items-center justify-between gap-3">
             <div className="inline-flex items-center gap-2 bg-pink-600 text-white text-xs font-black px-3.5 py-1.5 rounded-lg tracking-wider uppercase shadow-md">
               <span>🚀 ÜCRETSİZ TESLİMAT</span>
@@ -331,9 +335,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* İÇERİK ALANI (MAX-W-5XL VE FERAH YAPI) */}
+      {/* İÇERİK ALANI */}
       <div className="max-w-5xl mx-auto px-4 md:px-8 pt-6 space-y-6">
-        {/* ARAMA VE KATEGORİ LİSTESİ */}
         <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-pink-600" />
@@ -374,7 +377,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ÜRÜN LİSTESİ (BİLGİSAYARDA DÜZGÜN 2'Lİ GRID YAPISI) */}
+        {/* ÜRÜN LİSTESİ */}
         <main>
           {loading ? (
             <div className="text-center py-16 text-xs text-slate-400 font-bold">
@@ -395,7 +398,6 @@ export default function Home() {
                     key={product.id}
                     className="bg-white border border-slate-200/80 rounded-2xl p-4 flex gap-4 items-center justify-between shadow-sm hover:shadow-md transition"
                   >
-                    {/* Sol Görsel */}
                     <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-100">
                       {product.image_url ? (
                         <img
@@ -410,7 +412,6 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* Orta Bilgi */}
                     <div className="flex-1 min-w-0 pr-1">
                       <h3 className="font-bold text-slate-900 text-sm md:text-base truncate">
                         {product.title}
@@ -423,7 +424,6 @@ export default function Home() {
                       </p>
                     </div>
 
-                    {/* Sağ Sepet ve Admin Sil Butonu */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {isAdmin && (
                         <button
@@ -470,7 +470,7 @@ export default function Home() {
         </main>
       </div>
 
-      {/* ALT PEMBE SEPET BAR (GENİŞLETİLMİŞ) */}
+      {/* ALT PEMBE SEPET BAR */}
       {cart.length > 0 && (
         <div className="fixed bottom-5 left-4 right-4 max-w-5xl mx-auto bg-pink-600 text-white font-bold p-4 rounded-2xl shadow-2xl shadow-pink-600/40 flex items-center justify-between z-40 border border-pink-500/50">
           <div>

@@ -60,37 +60,63 @@ export default function MyOrdersPage() {
   }, []);
 
   const fetchMyOrders = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    try {
+      setLoading(true);
+      
+      // 1. Cihazdaki son sipariş ID'sini localStorage'dan alalım
+      const lastOrderId = typeof window !== "undefined" ? localStorage.getItem("last_order_id") : null;
+
+      // 2. Kullanıcı oturumunu kontrol edelim
+      const { data: { user } } = await supabase.auth.getUser();
+
+      let query = supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .order("created_at", { ascending: false });
+
+      // Eşleşme Şartları Oluşturma
+      const conditions: string[] = [];
+
+      if (user) {
+        conditions.push(`user_id.eq.${user.id}`);
+
+        // Profildeki telefonu çekelim
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.phone) {
+          conditions.push(`customer_phone.eq.${profile.phone}`);
+        }
+      }
+
+      if (lastOrderId) {
+        conditions.push(`id.eq.${lastOrderId}`);
+      }
+
+      // Eğer elimizde en az bir arama kriteri varsa OR sorgusu atalım
+      if (conditions.length > 0) {
+        query = query.or(conditions.join(","));
+        const { data, error } = await query;
+
+        if (data && data.length > 0) {
+          setOrders(data as Order[]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Eğer oturum yoksa ama genel sipariş verildiyse boş kalmasın diye fallback
+      if (!user && !lastOrderId) {
+        setOrders([]);
+      }
+    } catch (err) {
+      console.error("Siparişler çekilirken hata:", err);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Kullanıcının profilinden telefon numarasını çekelim
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("phone")
-      .eq("id", user.id)
-      .single();
-
-    // Hem user_id hem de telefon numarası eşleşmesini kontrol edelim
-    let query = supabase
-      .from("orders")
-      .select("*, order_items(*)")
-      .order("created_at", { ascending: false });
-
-    if (profile?.phone) {
-      query = query.or(`user_id.eq.${user.id},customer_phone.eq.${profile.phone}`);
-    } else {
-      query = query.eq("user_id", user.id);
-    }
-
-    const { data, error } = await query;
-
-    if (data) {
-      setOrders(data as Order[]);
-    }
-    setLoading(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -185,7 +211,7 @@ export default function MyOrdersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                   <div>
                     <p className="text-[10px] text-slate-500 font-bold uppercase">
-                      Sipariş No: #{order.id.substring(0, 8)}
+                      Sipariş No: #{order.id ? order.id.substring(0, 8) : "-"}
                     </p>
                     <p className="text-xs font-bold text-white mt-0.5">
                       {new Date(order.created_at).toLocaleDateString("tr-TR", {
