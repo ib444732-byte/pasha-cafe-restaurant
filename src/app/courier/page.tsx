@@ -67,11 +67,11 @@ export default function CourierPage() {
     }
 
     setCurrentCourier(profile);
-    fetchCourierOrders(profile.id);
+    fetchCourierOrders();
     subscribeToRealtimeOrders();
   };
 
-  const fetchCourierOrders = async (courierId: string) => {
+  const fetchCourierOrders = async () => {
     const { data: orderData } = await supabase
       .from("orders")
       .select("*, order_items(*)")
@@ -89,7 +89,7 @@ export default function CourierPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
         () => {
-          if (currentCourier) fetchCourierOrders(currentCourier.id);
+          fetchCourierOrders();
         }
       )
       .subscribe();
@@ -115,7 +115,7 @@ export default function CourierPage() {
       alert("Sipariş üzerine alınamadı: " + error.message);
     } else {
       alert("🚀 Sipariş üzerinize alındı ve 'Yolda' olarak güncellendi!");
-      fetchCourierOrders(currentCourier.id);
+      fetchCourierOrders();
       setActiveSubTab("myOrders");
     }
   };
@@ -133,7 +133,7 @@ export default function CourierPage() {
       alert("Sipariş tamamlanamadı: " + error.message);
     } else {
       alert("🎉 Sipariş başarıyla teslim edildi!");
-      if (currentCourier) fetchCourierOrders(currentCourier.id);
+      fetchCourierOrders();
     }
   };
 
@@ -142,15 +142,21 @@ export default function CourierPage() {
     router.replace("/login");
   };
 
-  // ALINABİLİR SİPARİŞLER (HAZIR VEYA HAZIRLANIYOR OLANLAR)
+  // ALINABİLİR SİPARİŞLER: Kuryeye henüz atanmamış ve tamamlanmamış/iptal olmamış TÜM siparişler
   const availableOrders = orders.filter(
-    (o) => (o.status === "hazir" || o.status === "hazirlaniyor" || o.status === "bekliyor") && !o.courier_id
+    (o) =>
+      !o.courier_id &&
+      o.status !== "teslim_edildi" &&
+      o.status !== "iptal" &&
+      o.status !== "iptal_edildi"
   );
 
+  // ÜZERİMDEKİ SİPARİŞLER: Kuryenin aldığı ve hâlâ yolda olanlar
   const myActiveOrders = orders.filter(
     (o) => o.courier_id === currentCourier?.id && o.status === "yolda"
   );
 
+  // BİTEN SİPARİŞLER GEÇMİŞİ
   const myCompletedOrders = orders.filter(
     (o) => o.courier_id === currentCourier?.id && (o.status === "teslim_edildi" || o.status === "iptal" || o.status === "iptal_edildi")
   );
@@ -158,6 +164,8 @@ export default function CourierPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
+        
+        {/* ÜST BAR */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-2xl flex items-center justify-center">
@@ -183,7 +191,7 @@ export default function CourierPage() {
             </button>
 
             <button
-              onClick={() => currentCourier && fetchCourierOrders(currentCourier.id)}
+              onClick={fetchCourierOrders}
               className="p-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl transition"
             >
               <RefreshCw className="w-4 h-4" />
@@ -211,6 +219,7 @@ export default function CourierPage() {
           </div>
         )}
 
+        {/* SEKME BUTONLARI */}
         <div className="grid grid-cols-3 gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
           <button
             onClick={() => setActiveSubTab("available")}
@@ -264,7 +273,7 @@ export default function CourierPage() {
                       </p>
                     </div>
                     <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-black px-2.5 py-1 rounded-md uppercase">
-                      {order.status === "hazir" ? "HAZIR / ALINABİLİR" : order.status}
+                      {order.status === "hazir" ? "HAZIR / ALINABİLİR" : order.status === "bekliyor" ? "BEKLİYOR" : "MUTFAKTA"}
                     </span>
                   </div>
 
