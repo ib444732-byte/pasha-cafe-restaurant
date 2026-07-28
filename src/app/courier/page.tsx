@@ -44,7 +44,7 @@ export default function CourierPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<"available" | "myOrders" | "history">("available");
 
-  // Ses İznini Tarayıcı Hafızasından (localStorage) Okuyalım
+  // Ses İznini Hafızada Tutalım
   const [audioAllowed, setAudioAllowed] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("courier_audio_enabled") === "true";
@@ -52,10 +52,40 @@ export default function CourierPage() {
     return false;
   });
 
+  // Önceki sipariş sayısını takip eden ref (Ses tetikleyici için)
+  const prevAvailableCountRef = useRef<number | null>(null);
+
+  // DAHİLİ SES ÜRETİCİ (WEB AUDIO API BEEP)
+  const playNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const playBeep = (freq: number, startTime: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + startTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + startTime);
+        osc.stop(audioCtx.currentTime + startTime + duration);
+      };
+
+      // 3 Tonlu Dikkat Çekici Sipariş Zili (Ding-Dong-Ding)
+      playBeep(880, 0, 0.15);     // A5
+      playBeep(1046.5, 0.18, 0.15); // C6
+      playBeep(1318.5, 0.36, 0.3);  // E6
+    } catch (e) {
+      console.error("Ses çalınamadı:", e);
+    }
+  };
+
   useEffect(() => {
     checkCourierAuth();
 
-    // DÜZENLEME: Realtime bağlantısı yanında her 5 saniyede bir otomatik sessiz tarama yapalım (Sayfa yenilemeye gerek kalmaz)
+    // Her 5 saniyede bir otomatik yoklama
     const interval = setInterval(() => {
       fetchCourierOrders();
     }, 5000);
@@ -67,6 +97,10 @@ export default function CourierPage() {
     setAudioAllowed(enable);
     if (typeof window !== "undefined") {
       localStorage.setItem("courier_audio_enabled", enable ? "true" : "false");
+    }
+    // Test amaçlı butona tıklandığında kısa ses çal
+    if (enable) {
+      playNotificationSound();
     }
   };
 
@@ -101,7 +135,29 @@ export default function CourierPage() {
       .order("created_at", { ascending: false });
 
     if (orderData) {
-      setOrders(orderData as Order[]);
+      const fetchedOrders = orderData as Order[];
+      
+      // Alınabilir siparişlerin sayısını hesaplayalım
+      const currentAvailable = fetchedOrders.filter(
+        (o) =>
+          !o.courier_id &&
+          o.status !== "teslim_edildi" &&
+          o.status !== "iptal" &&
+          o.status !== "iptal_edildi"
+      ).length;
+
+      // Eğer önceki sipariş sayısı biliniyorsa ve YENİ BİR SİPARİŞ GELMİŞSE Ses Çal!
+      if (
+        prevAvailableCountRef.current !== null &&
+        currentAvailable > prevAvailableCountRef.current
+      ) {
+        if (localStorage.getItem("courier_audio_enabled") === "true") {
+          playNotificationSound();
+        }
+      }
+
+      prevAvailableCountRef.current = currentAvailable;
+      setOrders(fetchedOrders);
     }
   };
 
@@ -184,7 +240,6 @@ export default function CourierPage() {
     (o) => o.courier_id === currentCourier?.id && (o.status === "teslim_edildi" || o.status === "iptal" || o.status === "iptal_edildi")
   );
 
-  // Sipariş Durum Rozeti Fonksiyonu
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case "bekliyor":
@@ -263,7 +318,7 @@ export default function CourierPage() {
         {/* SES AÇMA BANNERI */}
         {!audioAllowed && (
           <div className="bg-purple-900/30 border border-purple-500/30 p-4 rounded-2xl flex items-center justify-between gap-3 text-xs">
-            <span className="text-purple-200">Sipariş sesli uyarılarını kalıcı açmak için tıklayın:</span>
+            <span className="text-purple-200">Yeni sipariş ses uyarısını aktifleştirmek için tıklayın:</span>
             <button
               onClick={() => toggleAudio(true)}
               className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3.5 py-2 rounded-xl transition shrink-0"
