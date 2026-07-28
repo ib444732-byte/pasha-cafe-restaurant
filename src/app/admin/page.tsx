@@ -328,29 +328,52 @@ export default function AdminPage() {
     (o) => o.status === "teslim_edildi" || o.status === "iptal"
   );
 
-  // HESAPLAR / ANALİZ HESAPLAMALARI (SEÇİLEN TARİHE GÖRE GÜVENLİ FİLTRELEME)
-  const selectedDateOrders = orders.filter((order) => {
-    if (order.status !== "teslim_edildi") return false; // Sadece teslim edilenler
-    if (!order.created_at) return false;
-    
-    // Siparişin yerel tarihini al (UTC uyuşmazlığını engellemek için)
-    const orderDateObj = new Date(order.created_at);
-    const oYear = orderDateObj.getFullYear();
-    const oMonth = String(orderDateObj.getMonth() + 1).padStart(2, "0");
-    const oDay = String(orderDateObj.getDate()).padStart(2, "0");
-    const formattedOrderDate = `${oYear}-${oMonth}-${oDay}`;
+  // YEREL TARİH FORMATLAYICI (YYYY-MM-DD)
+  const formatDateString = (dateStr: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
-    return formattedOrderDate === selectedDate;
-  });
+  const todayStr = getTodayDateString();
 
-  const totalRevenue = selectedDateOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-  
-  // Esnek Ödeme Metodu Karşılaştırması (Küçük/büyük harf veya boşluk farklarını tolere eder)
-  const cashRevenue = selectedDateOrders
+  const yesterdayDateObj = new Date();
+  yesterdayDateObj.setDate(yesterdayDateObj.getDate() - 1);
+  const yesterdayStr = `${yesterdayDateObj.getFullYear()}-${String(yesterdayDateObj.getMonth() + 1).padStart(2, "0")}-${String(yesterdayDateObj.getDate()).padStart(2, "0")}`;
+
+  const currentYearMonth = todayStr.substring(0, 7); // "YYYY-MM"
+
+  // SADECE TESLİM EDİLMİŞ SİPARİŞLER
+  const deliveredOrders = orders.filter((o) => o.status === "teslim_edildi" && o.created_at);
+
+  // 1. Bugünün Cirosu
+  const todayRevenue = deliveredOrders
+    .filter((o) => formatDateString(o.created_at) === todayStr)
+    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+  // 2. Dünün Cirosu
+  const yesterdayRevenue = deliveredOrders
+    .filter((o) => formatDateString(o.created_at) === yesterdayStr)
+    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+  // 3. Bu Ayın Cirosu
+  const thisMonthRevenue = deliveredOrders
+    .filter((o) => formatDateString(o.created_at).startsWith(currentYearMonth))
+    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+  // 4. Takvimden Seçilen Günün Siparişleri & Cirosu
+  const selectedDateOrders = deliveredOrders.filter(
+    (o) => formatDateString(o.created_at) === selectedDate
+  );
+
+  const selectedDateTotalRevenue = selectedDateOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+  const selectedDateCashRevenue = selectedDateOrders
     .filter((o) => o.payment_method?.toLowerCase().includes("nakit"))
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
-    
-  const cardRevenue = selectedDateOrders
+  const selectedDateCardRevenue = selectedDateOrders
     .filter((o) => o.payment_method?.toLowerCase().includes("kart") || o.payment_method?.toLowerCase().includes("pos"))
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
@@ -529,42 +552,76 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 2. SEKME: HESAPLAR / ANALİZ (TARIHE GORE CIRO VE DETAY) */}
+        {/* 2. SEKME: HESAPLAR / ANALİZ (İSTEKLERE GÖRE YENİLENDİ) */}
         {activeTab === "analytics" && (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            {/* TARİH SEÇİCİ UST BAR */}
+          <div className="space-y-6 max-w-5xl mx-auto">
+            
+            {/* ÜST DÖNEMSEL CİRO ÖZET KARTLARI (BUGÜN, DÜN, BU AY) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* BUGÜN */}
+              <div className="bg-gradient-to-br from-pink-600 to-pink-700 p-5 rounded-3xl shadow-xl space-y-1 text-white border border-pink-500/30">
+                <span className="text-[11px] font-extrabold uppercase opacity-80 tracking-wider">Bugünün Cirosu</span>
+                <p className="text-2xl font-black">₺{todayRevenue.toFixed(2)}</p>
+                <p className="text-[10px] opacity-75">{todayStr} (Canlı Tutar)</p>
+              </div>
+
+              {/* DÜN */}
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-1 text-white">
+                <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">Dünün Cirosu</span>
+                <p className="text-2xl font-black text-amber-400">₺{yesterdayRevenue.toFixed(2)}</p>
+                <p className="text-[10px] text-slate-500">{yesterdayStr}</p>
+              </div>
+
+              {/* BU AY */}
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-1 text-white">
+                <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider">Bu Ayın Toplamı</span>
+                <p className="text-2xl font-black text-blue-400">₺{thisMonthRevenue.toFixed(2)}</p>
+                <p className="text-[10px] text-slate-500">Bu Ay Genel Toplam</p>
+              </div>
+            </div>
+
+            {/* TARİH SEÇİCİ UST BAR (TAKVİM İKONUNA VEYA KUTUYA TIKLAYINCA DİREKT AÇILIR) */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-pink-500" /> Günlük Finansal Analiz
+                  <BarChart3 className="w-5 h-5 text-pink-500" /> Detaylı Günlük Döküm
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Seçilen tarihe ait teslim edilmiş siparişlerin ciro dökümü
+                  Tarih seçerek o günün nakit ve kart detaylarını inceleyin
                 </p>
               </div>
 
-              {/* OTOMATİK BUGÜNÜN TARİHİ İLE GEÇMİŞ/GELECEK SEÇİLEBİLİR TARİH INPUTU */}
-              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-4 py-2.5 rounded-2xl">
-                <Calendar className="w-4 h-4 text-pink-500" />
+              {/* TAKVİM YAPRAĞI İKONLU VE HER YERİ TIKLANABİLİR BÖLÜM */}
+              <label 
+                className="flex items-center gap-3 bg-slate-950 border border-slate-800 hover:border-pink-500/50 px-4 py-3 rounded-2xl cursor-pointer transition shadow-inner group"
+                onClick={(e) => {
+                  const inputEl = e.currentTarget.querySelector("input");
+                  if (inputEl && "showPicker" in inputEl) {
+                    try { (inputEl as any).showPicker(); } catch (err) {}
+                  }
+                }}
+              >
+                <Calendar className="w-5 h-5 text-pink-500 group-hover:scale-110 transition shrink-0" />
+                <span className="text-xs font-bold text-slate-300">Tarih Seç:</span>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs text-white font-extrabold focus:outline-none cursor-pointer"
                 />
-              </div>
+              </label>
             </div>
 
-            {/* İSTATİSTİK KARTLARI */}
+            {/* SEÇİLEN TARİHİN DETAY KARTLARI */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* TOPLAM CİRO */}
-              <div className="bg-gradient-to-br from-pink-600 to-pink-800 p-5 rounded-3xl shadow-xl space-y-2 text-white">
+              {/* SEÇİLEN GÜN TOPLAM */}
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-2 text-white">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase opacity-80">Toplam Ciro</span>
-                  <Wallet className="w-5 h-5 opacity-90" />
+                  <span className="text-xs font-bold text-slate-400 uppercase">Seçilen Gün Toplam</span>
+                  <Wallet className="w-5 h-5 text-pink-500" />
                 </div>
-                <p className="text-2xl font-black">₺{totalRevenue.toFixed(2)}</p>
-                <p className="text-[11px] opacity-80">{selectedDateOrders.length} Adet Teslim Edilmiş Sipariş</p>
+                <p className="text-2xl font-black text-pink-500">₺{selectedDateTotalRevenue.toFixed(2)}</p>
+                <p className="text-[11px] text-slate-400">{selectedDateOrders.length} Adet Sipariş</p>
               </div>
 
               {/* KAPIDA NAKİT */}
@@ -573,8 +630,8 @@ export default function AdminPage() {
                   <span className="text-xs font-bold text-slate-400 uppercase">Kapıda Nakit</span>
                   <Banknote className="w-5 h-5 text-emerald-400" />
                 </div>
-                <p className="text-2xl font-black text-emerald-400">₺{cashRevenue.toFixed(2)}</p>
-                <p className="text-[11px] text-slate-400">Nakit Tahsil Edilen Tutar</p>
+                <p className="text-2xl font-black text-emerald-400">₺{selectedDateCashRevenue.toFixed(2)}</p>
+                <p className="text-[11px] text-slate-400">Nakit Tahsil Edilen</p>
               </div>
 
               {/* KAPIDA KREDİ KARTI */}
@@ -583,15 +640,15 @@ export default function AdminPage() {
                   <span className="text-xs font-bold text-slate-400 uppercase">Kapıda POS / Kart</span>
                   <CreditCard className="w-5 h-5 text-purple-400" />
                 </div>
-                <p className="text-2xl font-black text-purple-400">₺{cardRevenue.toFixed(2)}</p>
-                <p className="text-[11px] text-slate-400">POS Cihazından Çekilen Tutar</p>
+                <p className="text-2xl font-black text-purple-400">₺{selectedDateCardRevenue.toFixed(2)}</p>
+                <p className="text-[11px] text-slate-400">POS Cihazından Çekilen</p>
               </div>
             </div>
 
             {/* SEÇİLEN TARİHE AİT SİPARİŞ LİSTESİ */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {selectedDate} Tarihli Teslim Edilen Siparişler ({selectedDateOrders.length})
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {selectedDate} Tarihli Sipariş Dökümü ({selectedDateOrders.length})
               </h3>
 
               {selectedDateOrders.length === 0 ? (
@@ -621,6 +678,7 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+
           </div>
         )}
 
