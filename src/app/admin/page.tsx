@@ -25,6 +25,11 @@ import {
   Banknote,
   Award,
   TrendingUp,
+  Info,
+  X,
+  Phone,
+  MapPin,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -58,6 +63,7 @@ interface Order {
   payment_method: string;
   status: string;
   created_at: string;
+  courier_id?: string | null;
   order_items?: OrderItem[];
 }
 
@@ -80,6 +86,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [catLoading, setCatLoading] = useState(false);
   
+  // Seçili Sipariş Detay Modalı State'i
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
+
   // Sekme Yönetimi
   const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics">("orders");
   const [orderSubTab, setOrderSubTab] = useState<"active" | "completed">("active");
@@ -344,6 +353,15 @@ export default function AdminPage() {
     return getLocalDateString(dateObj);
   };
 
+  // Tarih ve Saati Formatlama
+  const formatDateTime = (createdAtStr: string) => {
+    if (!createdAtStr) return { date: "-", time: "-" };
+    const d = new Date(createdAtStr);
+    const date = d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    return { date, time };
+  };
+
   // TARİH HESAPLAMALARI
   const todayStr = getLocalDateString(new Date());
 
@@ -543,57 +561,70 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(orderSubTab === "active" ? activeOrders : completedOrders).map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-white text-sm">
-                          {order.customer_name}
-                        </h3>
-                        <p className="text-xs text-slate-400 mt-0.5">{order.customer_phone}</p>
-                      </div>
-                      <span
-                        className={`text-[10px] px-2.5 py-1 rounded-md font-extrabold uppercase border ${
-                          order.status === "bekliyor"
-                            ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                            : order.status === "hazirlaniyor"
-                            ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                            : order.status === "yolda"
-                            ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                            : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </div>
-
-                    <p className="text-xs bg-slate-950 p-3 rounded-xl border border-slate-800/80 text-slate-300 leading-relaxed">
-                      📍 {order.delivery_address}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                      <div>
-                        <p className="text-[10px] text-slate-500">{order.payment_method}</p>
-                        <p className="font-black text-pink-500 text-sm">₺{order.total_amount.toFixed(2)}</p>
+                {(orderSubTab === "active" ? activeOrders : completedOrders).map((order) => {
+                  const dateTime = formatDateTime(order.created_at);
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-bold text-white text-sm">
+                            {order.customer_name}
+                          </h3>
+                          <p className="text-xs text-slate-400 mt-0.5">{order.customer_phone}</p>
+                        </div>
+                        <span
+                          className={`text-[10px] px-2.5 py-1 rounded-md font-extrabold uppercase border ${
+                            order.status === "bekliyor"
+                              ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                              : order.status === "hazirlaniyor"
+                              ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                              : order.status === "yolda"
+                              ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                              : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                          }`}
+                        >
+                          {order.status}
+                        </span>
                       </div>
 
-                      <select
-                        value={order.status}
-                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                        className="bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-500 transition cursor-pointer"
-                      >
-                        <option value="bekliyor">Bekliyor</option>
-                        <option value="hazirlaniyor">Hazırlanıyor (Mutfakta)</option>
-                        <option value="yolda">Kuryeye Ver (Yolda)</option>
-                        <option value="teslim_edildi">Teslim Edildi (Geçmişe At)</option>
-                        <option value="iptal">İptal Et</option>
-                      </select>
+                      <p className="text-xs bg-slate-950 p-3 rounded-xl border border-slate-800/80 text-slate-300 leading-relaxed">
+                        📍 {order.delivery_address}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div>
+                          <p className="text-[10px] text-slate-500">{order.payment_method}</p>
+                          <p className="font-black text-pink-500 text-sm">₺{Number(order.total_amount || 0).toFixed(2)}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* DETAYLAR BUTONU */}
+                          <button
+                            onClick={() => setSelectedOrderDetails(order)}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1"
+                          >
+                            <Info className="w-3.5 h-3.5 text-pink-400" /> Detaylar
+                          </button>
+
+                          <select
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            className="bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-pink-500 transition cursor-pointer"
+                          >
+                            <option value="bekliyor">Bekliyor</option>
+                            <option value="hazirlaniyor">Hazırlanıyor (Mutfakta)</option>
+                            <option value="yolda">Kuryeye Ver (Yolda)</option>
+                            <option value="teslim_edildi">Teslim Edildi (Geçmişe At)</option>
+                            <option value="iptal">İptal Et</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -757,24 +788,40 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {selectedDateOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 flex items-center justify-between gap-4"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-white">{order.customer_name}</p>
-                        <p className="text-xs text-slate-400">{order.customer_phone} • {order.payment_method}</p>
-                      </div>
+                  {selectedDateOrders.map((order) => {
+                    const dateTime = formatDateTime(order.created_at);
+                    return (
+                      <div
+                        key={order.id}
+                        className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <p className="text-sm font-bold text-white">{order.customer_name}</p>
+                          <p className="text-xs text-slate-400">{order.customer_phone} • {order.payment_method}</p>
+                          <p className="text-[11px] text-pink-400 font-semibold mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Sipariş Saati: {dateTime.time}
+                          </p>
+                        </div>
 
-                      <div className="text-right">
-                        <p className="text-sm font-black text-pink-500">₺{Number(order.total_amount).toFixed(2)}</p>
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md font-bold border border-emerald-500/30">
-                          Teslim Edildi
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-sm font-black text-pink-500">₺{Number(order.total_amount).toFixed(2)}</p>
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md font-bold border border-emerald-500/30">
+                              Teslim Edildi
+                            </span>
+                          </div>
+
+                          {/* ANALİZ SEKMESİ İÇİN DETAYLAR BUTONU */}
+                          <button
+                            onClick={() => setSelectedOrderDetails(order)}
+                            className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1"
+                          >
+                            <Info className="w-3.5 h-3.5 text-pink-500" /> Detaylar
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -999,6 +1046,102 @@ export default function AdminPage() {
         )}
 
       </div>
+
+      {/* SİPARİŞ DETAYLARI POPUP MODALI */}
+      {selectedOrderDetails && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-pink-500/10 text-pink-500 rounded-xl flex items-center justify-center border border-pink-500/20">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Sipariş Detay Dökümü</h3>
+                  <p className="text-[11px] text-slate-400">ID: #{selectedOrderDetails.id.substring(0, 8)}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedOrderDetails(null)}
+                className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white rounded-xl transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Tarih ve Zaman Kartı */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-pink-500" /> Sipariş Tarihi
+                </p>
+                <p className="font-extrabold text-slate-200 mt-0.5">
+                  {formatDateTime(selectedOrderDetails.created_at).date}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-pink-500" /> Sipariş Verilme Saati
+                </p>
+                <p className="font-extrabold text-pink-400 text-sm mt-0.5">
+                  {formatDateTime(selectedOrderDetails.created_at).time}
+                </p>
+              </div>
+            </div>
+
+            {/* Müşteri ve Teslimat Bilgileri */}
+            <div className="space-y-2 text-xs">
+              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 space-y-1">
+                <p className="font-bold text-white text-sm">{selectedOrderDetails.customer_name}</p>
+                <p className="text-slate-400 flex items-center gap-1">
+                  <Phone className="w-3 h-3 text-pink-500" /> {selectedOrderDetails.customer_phone}
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-pink-500 shrink-0 mt-0.5" />
+                <p className="text-slate-300 leading-relaxed">{selectedOrderDetails.delivery_address}</p>
+              </div>
+            </div>
+
+            {/* Sipariş Edilen Ürünler */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sipariş İçeriği</p>
+              <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 space-y-2 max-h-36 overflow-y-auto">
+                {selectedOrderDetails.order_items && selectedOrderDetails.order_items.length > 0 ? (
+                  selectedOrderDetails.order_items.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center text-xs border-b border-slate-900 pb-1.5 last:border-0 last:pb-0">
+                      <span className="text-slate-200 font-medium">
+                        <strong className="text-pink-500">{item.quantity}x</strong> {item.product_title}
+                      </span>
+                      <span className="font-bold text-slate-300">₺{(item.unit_price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[11px] text-slate-500 text-center py-2">Ürün detayı bulunamadı.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Ödeme ve Tutar Özeti */}
+            <div className="bg-gradient-to-r from-pink-900/30 to-purple-900/30 border border-pink-500/20 p-4 rounded-2xl flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-pink-300 uppercase font-bold">Ödeme Yöntemi</p>
+                <p className="text-xs font-extrabold text-white mt-0.5">{selectedOrderDetails.payment_method}</p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[10px] text-pink-300 uppercase font-bold">Toplam Tutar</p>
+                <p className="text-lg font-black text-pink-400">₺{Number(selectedOrderDetails.total_amount || 0).toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
