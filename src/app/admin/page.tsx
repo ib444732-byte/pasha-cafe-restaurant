@@ -30,6 +30,7 @@ import {
   MapPin,
   Receipt,
   XCircle,
+  CheckCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -326,13 +327,13 @@ export default function AdminPage() {
     }
   };
 
-  // DURUM GÜNCELLEME VE TAMAMLANMA ZAMANINI (updated_at) KAYDETME
+  // DURUM GÜNCELLEME VE TAMAMLANMA SAATİNİ KAYDETME
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
       .from("orders")
       .update({ 
         status, 
-        updated_at: new Date().toISOString() // Tam güncellendiği/tamamlandığı anın saati
+        updated_at: new Date().toISOString()
       })
       .eq("id", orderId);
 
@@ -351,18 +352,18 @@ export default function AdminPage() {
     (o) => o.status === "teslim_edildi" || o.status === "iptal"
   );
 
-  // Tarih Karşılaştırması İçin UTC/Yerel Saat Dönüştürücüsü
+  // Tarih Karşılaştırması
   const getOrderLocalDate = (createdAtStr: string) => {
     if (!createdAtStr) return "";
     const dateObj = new Date(createdAtStr);
     return getLocalDateString(dateObj);
   };
 
-  // Tarih ve Saati Formatlama
-  const formatDateTime = (createdAtStr?: string) => {
-    if (!createdAtStr) return { date: "-", time: "-" };
+  // Tarih ve Saat Biçimlendirme
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return { date: "-", time: "-" };
     try {
-      const d = new Date(createdAtStr);
+      const d = new Date(dateStr);
       const date = d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
       const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
       return { date, time };
@@ -378,27 +379,23 @@ export default function AdminPage() {
   yesterdayObj.setDate(yesterdayObj.getDate() - 1);
   const yesterdayStr = getLocalDateString(yesterdayObj);
 
-  const currentYearMonth = todayStr.substring(0, 7); // "YYYY-MM"
+  const currentYearMonth = todayStr.substring(0, 7);
 
   // Sadece Teslim Edilen Siparişler
   const deliveredOrders = orders.filter((o) => o.status === "teslim_edildi" && o.created_at);
 
-  // 1. Bugünün Cirosu
   const todayRevenue = deliveredOrders
     .filter((o) => getOrderLocalDate(o.created_at) === todayStr)
     .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
-  // 2. Dünün Cirosu
   const yesterdayRevenue = deliveredOrders
     .filter((o) => getOrderLocalDate(o.created_at) === yesterdayStr)
     .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
-  // 3. Bu Ayın Cirosu
   const thisMonthRevenue = deliveredOrders
     .filter((o) => getOrderLocalDate(o.created_at).startsWith(currentYearMonth))
     .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
-  // 4. Takvimden Seçilen Günün Siparişleri & Cirosu
   const selectedDateOrders = deliveredOrders.filter(
     (o) => getOrderLocalDate(o.created_at) === selectedDate
   );
@@ -436,7 +433,6 @@ export default function AdminPage() {
 
   const maxSalesQuantity = sortedProductSales.length > 0 ? sortedProductSales[0].quantity : 1;
 
-  // Takvim Açma Tetikleyicisi
   const openDatePicker = () => {
     if (dateInputRef.current) {
       if ("showPicker" in dateInputRef.current) {
@@ -500,7 +496,6 @@ export default function AdminPage() {
               <Plus className="w-4 h-4" /> Ürün / Kategori
             </button>
 
-            {/* HESAPLAR / ANALİZ SEKMESİ */}
             <button
               onClick={() => setActiveTab("analytics")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
@@ -666,8 +661,6 @@ export default function AdminPage() {
         {/* 2. SEKME: HESAPLAR / ANALİZ */}
         {activeTab === "analytics" && (
           <div className="space-y-6 max-w-5xl mx-auto">
-            
-            {/* ÜST DÖNEMSEL CİRO ÖZET KARTLARI */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-pink-600 to-pink-700 p-5 rounded-3xl shadow-xl space-y-1 text-white border border-pink-500/30">
                 <span className="text-[11px] font-extrabold uppercase opacity-80 tracking-wider">Bugünün Cirosu</span>
@@ -688,7 +681,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* TARİH SEÇİCİ UST BAR */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -715,7 +707,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* SEÇİLEN TARİHİN DETAY KARTLARI */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-2 text-white">
                 <div className="flex items-center justify-between">
@@ -745,7 +736,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* EN ÇOK SATAN ÜRÜNLER */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
@@ -801,7 +791,6 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* SEÇİLEN TARİHE AİT SİPARİŞ LİSTESİ */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {selectedDate} Tarihli Sipariş Dökümü ({selectedDateOrders.length})
@@ -1074,7 +1063,7 @@ export default function AdminPage() {
       {/* SİPARİŞ DETAYLARI POPUP MODALI */}
       {selectedOrderDetails && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-2.5">
@@ -1095,24 +1084,34 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Tarih ve Zaman Kartları (Sipariş Saati ve Teslim/İptal Saati) */}
+            {/* ZAMAN KARTLARI (Sipariş Verilme Saati VE Teslim Edilme Saati) */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
               <div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
                   <Calendar className="w-3 h-3 text-pink-500" /> Sipariş Verilme Saati
                 </p>
                 <p className="font-extrabold text-slate-200 mt-0.5">
-                  {formatDateTime(selectedOrderDetails.created_at).time} <span className="text-[10px] text-slate-400 font-normal">({formatDateTime(selectedOrderDetails.created_at).date})</span>
+                  {formatDateTime(selectedOrderDetails.created_at).time} 
+                  <span className="text-[10px] text-slate-400 font-normal block">
+                    ({formatDateTime(selectedOrderDetails.created_at).date})
+                  </span>
                 </p>
               </div>
 
               <div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-emerald-400" /> 
-                  {selectedOrderDetails.status === "teslim_edildi" ? "Teslim Edilme Saati" : selectedOrderDetails.status === "iptal" ? "İptal Edilme Saati" : "Son Güncelleme"}
+                  {selectedOrderDetails.status === "teslim_edildi" ? (
+                    <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                  {selectedOrderDetails.status === "teslim_edildi" ? "Teslim Edilme Saati" : selectedOrderDetails.status === "iptal" ? "İptal Edilme Saati" : "Son Durum Saati"}
                 </p>
                 <p className={`font-extrabold text-sm mt-0.5 ${selectedOrderDetails.status === "teslim_edildi" ? "text-emerald-400" : selectedOrderDetails.status === "iptal" ? "text-red-400" : "text-amber-400"}`}>
-                  {selectedOrderDetails.updated_at ? formatDateTime(selectedOrderDetails.updated_at).time : "-"}
+                  {selectedOrderDetails.updated_at ? formatDateTime(selectedOrderDetails.updated_at).time : formatDateTime(selectedOrderDetails.created_at).time}
+                  <span className="text-[10px] text-slate-400 font-normal block">
+                    ({selectedOrderDetails.updated_at ? formatDateTime(selectedOrderDetails.updated_at).date : formatDateTime(selectedOrderDetails.created_at).date})
+                  </span>
                 </p>
               </div>
             </div>
