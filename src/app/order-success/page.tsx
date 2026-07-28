@@ -11,7 +11,7 @@ import {
   XCircle,
   ShoppingBag,
   ArrowLeft,
-  ChevronRight,
+  Package,
   AlertCircle
 } from "lucide-react";
 import Link from "next/link";
@@ -66,11 +66,26 @@ export default function MyOrdersPage() {
       return;
     }
 
-    const { data } = await supabase
+    // Kullanıcının profilinden telefon numarasını çekelim
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("phone")
+      .eq("id", user.id)
+      .single();
+
+    // Hem user_id hem de telefon numarası eşleşmesini kontrol edelim
+    let query = supabase
       .from("orders")
       .select("*, order_items(*)")
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+
+    if (profile?.phone) {
+      query = query.or(`user_id.eq.${user.id},customer_phone.eq.${profile.phone}`);
+    } else {
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (data) {
       setOrders(data as Order[]);
@@ -148,7 +163,7 @@ export default function MyOrdersPage() {
           <div className="text-center py-12 text-xs text-slate-500">Siparişleriniz yükleniyor...</div>
         ) : orders.length === 0 ? (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 text-center space-y-3">
-            <p className="text-sm font-bold text-slate-400">Henüz bir sipariş vermediniz.</p>
+            <p className="text-sm font-bold text-slate-400">Henüz aktif bir siparişiniz bulunmuyor.</p>
             <Link
               href="/"
               className="inline-block bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition"
