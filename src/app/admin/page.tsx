@@ -73,10 +73,17 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics">("orders");
   const [orderSubTab, setOrderSubTab] = useState<"active" | "completed">("active");
 
-  // Analiz Sekmesi İçin Tarih Seçimi (YYYY-MM-DD)
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  // Yerel sistem tarihini YYYY-MM-DD formatında üreten yardımcı fonksiyon
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Analiz Sekmesi İçin Otomatik Bugünün Tarihi (Değiştirilebilir)
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
 
   // Form State'leri
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -321,20 +328,30 @@ export default function AdminPage() {
     (o) => o.status === "teslim_edildi" || o.status === "iptal"
   );
 
-  // HESAPLAR / ANALİZ HESAPLAMALARI (SEÇİLEN TARİHE GÖRE)
+  // HESAPLAR / ANALİZ HESAPLAMALARI (SEÇİLEN TARİHE GÖRE GÜVENLİ FİLTRELEME)
   const selectedDateOrders = orders.filter((order) => {
     if (order.status !== "teslim_edildi") return false; // Sadece teslim edilenler
     if (!order.created_at) return false;
-    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
-    return orderDate === selectedDate;
+    
+    // Siparişin yerel tarihini al (UTC uyuşmazlığını engellemek için)
+    const orderDateObj = new Date(order.created_at);
+    const oYear = orderDateObj.getFullYear();
+    const oMonth = String(orderDateObj.getMonth() + 1).padStart(2, "0");
+    const oDay = String(orderDateObj.getDate()).padStart(2, "0");
+    const formattedOrderDate = `${oYear}-${oMonth}-${oDay}`;
+
+    return formattedOrderDate === selectedDate;
   });
 
   const totalRevenue = selectedDateOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+  
+  // Esnek Ödeme Metodu Karşılaştırması (Küçük/büyük harf veya boşluk farklarını tolere eder)
   const cashRevenue = selectedDateOrders
-    .filter((o) => o.payment_method === "Kapıda Nakit")
+    .filter((o) => o.payment_method?.toLowerCase().includes("nakit"))
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    
   const cardRevenue = selectedDateOrders
-    .filter((o) => o.payment_method === "Kapıda Kredi Kartı")
+    .filter((o) => o.payment_method?.toLowerCase().includes("kart") || o.payment_method?.toLowerCase().includes("pos"))
     .reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
   return (
@@ -386,7 +403,7 @@ export default function AdminPage() {
               <Plus className="w-4 h-4" /> Ürün / Kategori
             </button>
 
-            {/* YENİ EKLENEN HESAPLAR / ANALİZ SEKMESİ */}
+            {/* HESAPLAR / ANALİZ SEKMESİ */}
             <button
               onClick={() => setActiveTab("analytics")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
@@ -526,6 +543,7 @@ export default function AdminPage() {
                 </p>
               </div>
 
+              {/* OTOMATİK BUGÜNÜN TARİHİ İLE GEÇMİŞ/GELECEK SEÇİLEBİLİR TARİH INPUTU */}
               <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-4 py-2.5 rounded-2xl">
                 <Calendar className="w-4 h-4 text-pink-500" />
                 <input
