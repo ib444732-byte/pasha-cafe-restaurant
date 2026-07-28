@@ -48,42 +48,43 @@ export default function CourierPage() {
   // Ses efekti için AudioContext
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Ses çalma fonksiyonu (Web Audio API - harici dosya indirmeden bip efekti üretir)
+  // Ses çalma fonksiyonu (Tarayıcı kısıtlamalarını aşacak şekilde güçlendirildi)
   const playNotificationSound = () => {
     if (!isSoundEnabled) return;
 
     try {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!audioCtxRef.current) {
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         audioCtxRef.current = new AudioContextClass();
       }
 
       const ctx = audioCtxRef.current;
+      
+      // Tarayıcı sesi askıya aldıysa (suspended) zorla uyandır
       if (ctx.state === "suspended") {
         ctx.resume();
       }
 
-      // Çift Bip (Melodi efekti)
       const now = ctx.currentTime;
       
-      // First Tone
+      // First Tone (Yüksek sesli İlk Bip)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = "sine";
       osc1.frequency.setValueAtTime(880, now); // A5 note
-      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.setValueAtTime(0.5, now);
       gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
       osc1.start(now);
       osc1.stop(now + 0.2);
 
-      // Second Tone
+      // Second Tone (Daha Yüksek İkinci Bip)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = "sine";
       osc2.frequency.setValueAtTime(1174.66, now + 0.25); // D6 note
-      gain2.gain.setValueAtTime(0.4, now + 0.25);
+      gain2.gain.setValueAtTime(0.5, now + 0.25);
       gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
@@ -131,17 +132,21 @@ export default function CourierPage() {
     };
   }, []);
 
-  // Tarayıcı Ses İznini Aktifleştirme (Kullanıcı etkileşimi gerekir)
+  // Tarayıcı Ses İznini Aktifleştirme (Kullanıcı dokunduğu an sesi uyandırır)
   const enableAudio = () => {
-    if (!audioCtxRef.current) {
+    try {
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      audioCtxRef.current = new AudioContextClass();
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      if (audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume();
+      }
+      setAudioPermissionGranted(true);
+      playNotificationSound(); // İzin verildiğini doğrulamak için test sesi çal
+    } catch (err) {
+      console.error("Ses izni etkinleştirme hatası:", err);
     }
-    if (audioCtxRef.current.state === "suspended") {
-      audioCtxRef.current.resume();
-    }
-    setAudioPermissionGranted(true);
-    playNotificationSound(); // Test sesi çal
   };
 
   const fetchOrders = async () => {
