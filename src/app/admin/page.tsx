@@ -327,7 +327,7 @@ export default function AdminPage() {
     }
   };
 
-  // DURUM GÜNCELLEME VE TAMAMLANMA SAATİNİ KAYDETME
+  // DURUM GÜNCELLEME
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
       .from("orders")
@@ -593,7 +593,7 @@ export default function AdminPage() {
                               : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                           }`}
                         >
-                          {order.status === "teslim_edildi" ? "TESLİM EDİLDİ" : order.status === "iptal" ? "İPTAL EDİLDİ" : order.status}
+                          {order.status === "teslim_edildi" ? "TESLİM EDİLDİ" : order.status === "iptal" ? "İPTAL EDİLDİ" : order.status === "yolda" ? "YOLDA (KURYE ALDI)" : order.status}
                         </span>
                       </div>
 
@@ -643,7 +643,7 @@ export default function AdminPage() {
                             >
                               <option value="bekliyor">Bekliyor</option>
                               <option value="hazirlaniyor">Hazırlanıyor (Mutfakta)</option>
-                              <option value="yolda">Kuryeye Ver (Yolda)</option>
+                              <option value="hazirlaniyor">Hazır (Kurye Bekleniyor)</option>
                               <option value="teslim_edildi">Teslim Edildi (Tamamla)</option>
                               <option value="iptal">İptal Et</option>
                             </select>
@@ -1084,7 +1084,7 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* ZAMAN KARTLARI (Sipariş Verilme Saati VE Teslim Edilme Saati) */}
+            {/* ZAMAN KARTLARI */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
               <div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1">
