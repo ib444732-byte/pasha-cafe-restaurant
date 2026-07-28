@@ -388,7 +388,7 @@ export default function AdminPage() {
   const productSalesMap: { [title: string]: { quantity: number; revenue: number } } = {};
 
   selectedDateOrders.forEach((order) => {
-    if (order.order_items) {
+    if (order.order_items && Array.isArray(order.order_items)) {
       order.order_items.forEach((item) => {
         const title = item.product_title || "Bilinmeyen Ürün";
         const qty = item.quantity || 1;
