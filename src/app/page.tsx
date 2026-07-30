@@ -45,6 +45,16 @@ interface CartItem {
   quantity: number;
 }
 
+interface RestaurantSettings {
+  phone: string;
+  address: string;
+  min_order_amount: number;
+  delivery_time: string;
+  free_delivery_text: string;
+  free_delivery_limit: number;
+  has_free_delivery_limit: boolean;
+}
+
 // Türkiye İl & Kars İlçe/Mahalle Veri Yapısı
 const IL_LISTESI = [
   "Kars",
@@ -101,6 +111,17 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
 
+  // Dinamik Restoran Ayarları State'i
+  const [settings, setSettings] = useState<RestaurantSettings>({
+    phone: "0474 212 10 15",
+    address: "Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95",
+    min_order_amount: 100,
+    delivery_time: "25-35 dk",
+    free_delivery_text: "ÜCRETSİZ TESLİMAT",
+    free_delivery_limit: 200,
+    has_free_delivery_limit: true,
+  });
+
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Kullanıcı Oturumu
@@ -120,8 +141,8 @@ export default function Home() {
   const [selectedCity, setSelectedCity] = useState("Kars");
   const [selectedDistrict, setSelectedDistrict] = useState("Merkez");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState("Ortakapı Mahallesi");
-  const [streetAddress, setStreetAddress] = useState(""); // Sokak / Cadde
-  const [buildingDetails, setBuildingDetails] = useState(""); // Bina No / Daire No / Tarif
+  const [streetAddress, setStreetAddress] = useState("");
+  const [buildingDetails, setBuildingDetails] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState("Kapıda Nakit");
   const [submitting, setSubmitting] = useState(false);
@@ -129,6 +150,7 @@ export default function Home() {
   useEffect(() => {
     fetchData();
     checkUserSession();
+    fetchSettings();
 
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -138,6 +160,16 @@ export default function Home() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const fetchSettings = async () => {
+    const { data } = await supabase
+      .from("restaurant_settings")
+      .select("*")
+      .eq("id", 1)
+      .single();
+
+    if (data) setSettings(data);
+  };
 
   const checkUserSession = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -264,7 +296,6 @@ export default function Home() {
     setIsModalOpen(true);
   };
 
-  // İl Değiştiğinde İlçe ve Mahalleri Sıfırla
   const handleCityChange = (city: string) => {
     setSelectedCity(city);
     if (city === "Kars") {
@@ -276,7 +307,6 @@ export default function Home() {
     }
   };
 
-  // İlçe Değiştiğinde Mahalleleri Güncelle
   const handleDistrictChange = (district: string) => {
     setSelectedDistrict(district);
     if (selectedCity === "Kars" && KARS_ILCELERI[district]) {
@@ -299,7 +329,6 @@ export default function Home() {
       return;
     }
 
-    // Parça parça alınan adresleri birleştirip teslimat adresi yapıyoruz
     const fullDeliveryAddress = `${selectedCity} / ${selectedDistrict} / ${selectedNeighborhood} - ${streetAddress} ${buildingDetails ? `(${buildingDetails})` : ""}`;
 
     setSubmitting(true);
@@ -503,7 +532,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 -mt-4 space-y-6">
-        {/* ÖNE ÇIKAN RESTORAN KARTI */}
+        {/* 2. DİNAMİK ÖNE ÇIKAN RESTORAN KARTI */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
           <div className="relative h-64 sm:h-80 md:h-96 bg-slate-950 overflow-hidden">
             <img
@@ -513,8 +542,11 @@ export default function Home() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
 
+            {/* DİNAMİK ÜCRETSİZ TESLİMAT ROZETİ */}
             <div className="absolute top-5 left-5 bg-[#ff1773] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
-              ÜCRETSİZ TESLİMAT
+              {settings.has_free_delivery_limit
+                ? `${settings.free_delivery_limit} ₺ ÜZERİ ÜCRETSİZ TESLİMAT`
+                : settings.free_delivery_text}
             </div>
 
             <div className="absolute bottom-5 left-6 right-6 text-white flex justify-between items-end">
@@ -532,18 +564,19 @@ export default function Home() {
             </div>
           </div>
 
+          {/* DİNAMİK RESTORAN KÜNYE BİLGİLERİ */}
           <div className="p-4 sm:p-5 text-xs text-slate-600 space-y-2 bg-white">
             <p className="font-semibold text-slate-500">Cafe • Burger • Kebap • Tatlı • Baklava • Kahve</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-[11px]">
               <p className="flex items-center gap-1.5 font-bold text-slate-800">
-                <Phone className="w-3.5 h-3.5 text-[#ff1773]" /> 0474 212 10 15
+                <Phone className="w-3.5 h-3.5 text-[#ff1773]" /> {settings.phone}
               </p>
               <p className="flex items-center gap-1.5 truncate">
-                <MapPin className="w-3.5 h-3.5 text-[#ff1773]" /> Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95
+                <MapPin className="w-3.5 h-3.5 text-[#ff1773] shrink-0" /> {settings.address}
               </p>
               <p className="flex items-center gap-1.5 text-slate-500">
-                <Clock className="w-3.5 h-3.5 text-[#ff1773]" /> 25-35 dk • Min. sipariş 100,00 ₺
+                <Clock className="w-3.5 h-3.5 text-[#ff1773]" /> {settings.delivery_time} • Min. sipariş {Number(settings.min_order_amount || 0).toFixed(2)} ₺
               </p>
             </div>
           </div>
@@ -822,7 +855,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🏡 YENİ PARÇA PARÇA ADRESLİ SİPARİŞ MODALI */}
+      {/* PARÇA PARÇA ADRESLİ SİPARİŞ MODALI */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800 border border-slate-100 my-8">
@@ -838,7 +871,6 @@ export default function Home() {
             </h2>
 
             <form onSubmit={handleCompleteOrder} className="space-y-3 text-xs">
-              {/* İsim & Telefon */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-bold text-slate-600 mb-1">Ad Soyad</label>
@@ -862,13 +894,12 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 📍 ADRES SEÇİM ALANI (PARÇA PARÇA) */}
+              {/* ADRES SEÇİM ALANI */}
               <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
                 <p className="font-extrabold text-[#ff1773] flex items-center gap-1 text-[11px] uppercase tracking-wider">
                   <MapPin className="w-3.5 h-3.5" /> Teslimat Adresi
                 </p>
 
-                {/* 1. İL SEÇİMİ */}
                 <div>
                   <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">1. İl Seçin</label>
                   <select
@@ -882,7 +913,6 @@ export default function Home() {
                   </select>
                 </div>
 
-                {/* 2. İLÇE SEÇİMİ */}
                 <div>
                   <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">2. İlçe Seçin</label>
                   {selectedCity === "Kars" ? (
@@ -906,7 +936,6 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* 3. MAHALLE SEÇİMİ */}
                 <div>
                   <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">3. Mahalle Seçin</label>
                   {selectedCity === "Kars" && KARS_ILCELERI[selectedDistrict] ? (
@@ -930,7 +959,6 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* 4. CADDE / SOKAK */}
                 <div>
                   <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">4. Cadde / Sokak</label>
                   <input
@@ -943,7 +971,6 @@ export default function Home() {
                   />
                 </div>
 
-                {/* 5. BİNA NO / D AİRE / TARİF */}
                 <div>
                   <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">5. Bina No / Daire No / Adres Tarifi</label>
                   <input
@@ -956,7 +983,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Ödeme Yöntemi */}
               <div>
                 <label className="block font-bold text-slate-600 mb-1">Ödeme Yöntemi</label>
                 <select
@@ -969,7 +995,6 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Sipariş Toplamı & Tamamlama */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-slate-400">Toplam Tutar</p>

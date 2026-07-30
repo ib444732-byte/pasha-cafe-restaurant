@@ -30,6 +30,9 @@ import {
   Receipt,
   XCircle,
   CheckCheck,
+  Settings,
+  BuildingStorefront,
+  Save,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -75,6 +78,16 @@ interface Profile {
   role: string;
 }
 
+interface RestaurantSettings {
+  phone: string;
+  address: string;
+  min_order_amount: number;
+  delivery_time: string;
+  free_delivery_text: string;
+  free_delivery_limit: number;
+  has_free_delivery_limit: boolean;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -84,11 +97,22 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
+  const [settings, setSettings] = useState<RestaurantSettings>({
+    phone: "0474 212 10 15",
+    address: "Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95",
+    min_order_amount: 100,
+    delivery_time: "25-35 dk",
+    free_delivery_text: "ÜCRETSİZ TESLİMAT",
+    free_delivery_limit: 200,
+    has_free_delivery_limit: true,
+  });
+
   const [loading, setLoading] = useState(false);
   const [catLoading, setCatLoading] = useState(false);
-  
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics" | "settings">("orders");
   const [orderSubTab, setOrderSubTab] = useState<"active" | "completed">("active");
 
   const getLocalDateString = (d: Date = new Date()) => {
@@ -156,6 +180,28 @@ export default function AdminPage() {
     fetchProducts();
     fetchOrders();
     fetchProfiles();
+    fetchSettings();
+  };
+
+  const fetchSettings = async () => {
+    const { data } = await supabase.from("restaurant_settings").select("*").eq("id", 1).single();
+    if (data) setSettings(data);
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsLoading(true);
+
+    const { error } = await supabase
+      .from("restaurant_settings")
+      .upsert({ id: 1, ...settings });
+
+    setSettingsLoading(false);
+    if (!error) {
+      alert("🎉 Restoran ayarları başarıyla güncellendi!");
+    } else {
+      alert("Hata oluştu: " + error.message);
+    }
   };
 
   const fetchCategories = async () => {
@@ -503,6 +549,18 @@ export default function AdminPage() {
               }`}
             >
               <Users className="w-4 h-4" /> Kullanıcılar & Kuryeler
+            </button>
+
+            {/* YENİ: RESTORAN AYARLARI SEKMESİ */}
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                activeTab === "settings"
+                  ? "bg-pink-600 text-white shadow-lg shadow-pink-600/30"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Settings className="w-4 h-4" /> Restoran Ayarları
             </button>
           </div>
         </div>
@@ -1048,6 +1106,122 @@ export default function AdminPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ⚙️ 5. SEKME: RESTORAN & TESLİMAT AYARLARI */}
+        {activeTab === "settings" && (
+          <div className="space-y-4 max-w-2xl mx-auto">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
+              <h2 className="text-base font-bold text-pink-500 flex items-center gap-2 border-b border-slate-800 pb-3">
+                <BuildingStorefront className="w-5 h-5 text-pink-500" /> Restoran & Teslimat Bilgilerini Düzenle
+              </h2>
+
+              <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
+                {/* Ücretsiz Teslimat Seçenekleri */}
+                <div className="p-4 bg-slate-950/80 rounded-2xl border border-pink-500/30 space-y-3">
+                  <label className="flex items-center gap-2.5 font-bold text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.has_free_delivery_limit}
+                      onChange={(e) => setSettings({ ...settings, has_free_delivery_limit: e.target.checked })}
+                      className="w-4 h-4 accent-pink-600 rounded cursor-pointer"
+                    />
+                    <span>Belli Bir Tutar Üzerine Ücretsiz Teslimat Uygula</span>
+                  </label>
+
+                  {settings.has_free_delivery_limit ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block font-bold text-slate-300 mb-1">Ücretsiz Teslimat Sınırı (₺)</label>
+                        <input
+                          type="number"
+                          value={settings.free_delivery_limit}
+                          onChange={(e) => setSettings({ ...settings, free_delivery_limit: Number(e.target.value) })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500"
+                          placeholder="200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-300 mb-1">Rozet Etiket Metni</label>
+                        <input
+                          type="text"
+                          value={settings.free_delivery_text}
+                          onChange={(e) => setSettings({ ...settings, free_delivery_text: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500"
+                          placeholder="ÜCRETSİZ TESLİMAT"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Rozet Metni (Kullanıcıya Gösterilecek)</label>
+                      <input
+                        type="text"
+                        value={settings.free_delivery_text}
+                        onChange={(e) => setSettings({ ...settings, free_delivery_text: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500"
+                        placeholder="ÜCRETSİZ TESLİMAT"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Telefon & Teslimat Süresi */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Telefon Numarası</label>
+                    <input
+                      type="text"
+                      value={settings.phone}
+                      onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Ortalama Teslimat Süresi</label>
+                    <input
+                      type="text"
+                      value={settings.delivery_time}
+                      onChange={(e) => setSettings({ ...settings, delivery_time: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500"
+                      placeholder="25-35 dk"
+                    />
+                  </div>
+                </div>
+
+                {/* Minimum Sipariş Tutarı */}
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Minimum Sipariş Tutarı (₺)</label>
+                  <input
+                    type="number"
+                    value={settings.min_order_amount}
+                    onChange={(e) => setSettings({ ...settings, min_order_amount: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+
+                {/* Adres */}
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Açık Adres</label>
+                  <textarea
+                    rows={2}
+                    value={settings.address}
+                    onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 font-bold text-white focus:outline-none focus:border-pink-500 resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={settingsLoading}
+                  className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2 text-xs uppercase mt-4"
+                >
+                  <Save className="w-4 h-4" />
+                  {settingsLoading ? "Kaydediliyor..." : "Restoran Ayarlarını Kaydet"}
+                </button>
+              </form>
             </div>
           </div>
         )}
