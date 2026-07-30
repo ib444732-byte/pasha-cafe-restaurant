@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, ShoppingBag, Plus, Minus, Star, Heart, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Plus, Minus, Star, Heart, CheckCircle2, MessageSquare, Send } from "lucide-react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 
@@ -17,6 +17,14 @@ interface Product {
   is_available: boolean;
 }
 
+interface ProductReview {
+  id: string;
+  customer_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+}
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -28,9 +36,14 @@ export default function ProductDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [addedAnimation, setAddedAnimation] = useState(false);
 
+  // Ürüne ait onaylanmış yorumlar ve ortalama puan
+  const [productReviews, setProductReviews] = useState<ProductReview[]>([]);
+  const [productAvgRating, setProductAvgRating] = useState<number>(4.9);
+
   useEffect(() => {
     if (productId) {
       fetchProduct();
+      fetchProductReviews();
     }
   }, [productId]);
 
@@ -52,11 +65,27 @@ export default function ProductDetailPage() {
     setLoading(false);
   };
 
+  const fetchProductReviews = async () => {
+    const { data } = await supabase
+      .from("reviews")
+      .select("id, customer_name, rating, comment, created_at")
+      .eq("product_id", productId)
+      .eq("is_approved", true)
+      .order("created_at", { ascending: false });
+
+    if (data && data.length > 0) {
+      setProductReviews(data);
+      const total = data.reduce((sum, item) => sum + item.rating, 0);
+      setProductAvgRating(Number((total / data.length).toFixed(1)));
+    } else {
+      setProductReviews([]);
+      setProductAvgRating(4.9);
+    }
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
 
-    // Sepeti LocalStorage veya mevcut state yapınıza aktarma simülasyonu
-    // Mevcut sepet mantığınız ana sayfada kaldığı için sepete ekleme uyarısı verip yönlendiriyoruz
     setAddedAnimation(true);
     try {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
@@ -78,7 +107,7 @@ export default function ProductDetailPage() {
   if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans pb-24">
+    <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans pb-28">
       {/* GÖRSEL VE ÜST NAVİGASYON */}
       <div className="relative h-72 sm:h-96 w-full bg-slate-900">
         <img
@@ -91,7 +120,6 @@ export default function ProductDetailPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
 
-        {/* Üst Geri Butonu ve Favori */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
           <button
             onClick={() => router.back()}
@@ -127,7 +155,7 @@ export default function ProductDetailPage() {
             </div>
             <div className="flex items-center gap-1 bg-amber-50 text-amber-700 px-3 py-1 rounded-2xl text-xs font-black shrink-0">
               <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span>4.9</span>
+              <span>{productAvgRating}</span>
             </div>
           </div>
 
@@ -164,6 +192,37 @@ export default function ProductDetailPage() {
               <Plus className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        {/* 🌟 BU ÜRÜNE AİT ONAYLANMIŞ YORUMLAR BÖLÜMÜ */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-[#ff1773]" /> Bu Ürün İçin Yapılan Yorumlar ({productReviews.length})
+          </h2>
+
+          {productReviews.length === 0 ? (
+            <div className="text-center py-6 text-xs text-slate-400 font-medium">
+              Bu ürün için henüz onaylanmış bir yorum bulunmuyor. İlk değerlendiren siz olun! (<Link href="/orders" className="text-[#ff1773] font-bold underline">Geçmiş Siparişlerim</Link>)
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {productReviews.map((rev) => (
+                <div key={rev.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">{rev.customer_name}</span>
+                    <div className="flex items-center gap-1 text-amber-400">
+                      <Star className="w-3.5 h-3.5 fill-amber-400" />
+                      <span className="font-black text-slate-700">{rev.rating}.0</span>
+                    </div>
+                  </div>
+                  <p className="text-slate-600 italic">"{rev.comment}"</p>
+                  <span className="text-[10px] text-slate-400 block text-right">
+                    {new Date(rev.created_at).toLocaleDateString("tr-TR")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
