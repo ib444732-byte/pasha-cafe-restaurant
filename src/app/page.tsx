@@ -153,8 +153,8 @@ export default function Home() {
     const matchesCategory =
       selectedCategory === "all" || product.category_id === selectedCategory;
     const matchesSearch =
-      product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      product.title.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase().trim());
     return matchesCategory && matchesSearch;
   });
 
@@ -237,7 +237,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans pb-28">
-      {/* 1. ÜST HEADER (ULTRA CANLI VE AÇIK PEMBE) */}
+      {/* 1. ÜST HEADER */}
       <header className="bg-[#ff1773] text-white pt-6 pb-8 px-4 md:px-8 shadow-md">
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
@@ -292,6 +292,14 @@ export default function Home() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-white text-slate-900 placeholder-slate-400 rounded-full pl-11 pr-4 py-2.5 text-xs focus:outline-none shadow-md font-medium"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Silik Yönetici Giriş Linki */}
@@ -389,7 +397,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4. KATEGORİ SEKMELERİ (KAPSÜL ŞEKLİNDE) */}
+        {/* 4. KATEGORİ SEKMELERİ */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
@@ -423,7 +431,7 @@ export default function Home() {
             <div className="text-center py-12 text-xs text-slate-400 font-bold">Menü Yükleniyor...</div>
           ) : filteredProducts.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center text-xs text-slate-500 border border-slate-200">
-              Bu kategoride ürün bulunmuyor.
+              {searchTerm ? `"${searchTerm}" ile eşleşen ürün bulunamadı.` : "Bu kategoride ürün bulunmuyor."}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
