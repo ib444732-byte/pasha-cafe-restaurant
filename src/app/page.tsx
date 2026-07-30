@@ -473,7 +473,7 @@ export default function Home() {
     if (error) {
       alert("Yorum gönderilirken hata oluştu: " + error.message);
     } else {
-      alert("🎉 Yorumunuz alındı! Yönetici onayından sonra yayınlanacaktır. Teşekkür ederiz!");
+      alert("🎉 Yorumunuz alındı. Teşekkür ederiz!");
       setReviewModalOpen(false);
       setReviewComment("");
       setReviewRating(5);
