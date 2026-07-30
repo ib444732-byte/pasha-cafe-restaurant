@@ -12,11 +12,9 @@ import {
   Plus,
   Minus,
   Heart,
-  User,
   ShoppingBag,
   Flame,
   X,
-  CheckCircle2,
   ShieldCheck,
   LogOut,
 } from "lucide-react";
@@ -239,13 +237,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans pb-28">
-      {/* 1. ÜST HEADER (BİREBİR DEMO PEMBE BANNER) */}
+      {/* 1. ÜST HEADER */}
       <header className="bg-[#b32657] text-white pt-6 pb-8 px-4 md:px-8 shadow-md">
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
             {/* Sol Üst Logo ve Profil Adı */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-900/40 border border-white/20 flex items-center justify-center font-bold text-xs text-pink-200">
+              <div className="w-10 h-10 rounded-full bg-slate-900/40 border border-white/20 flex items-center justify-center font-black text-[11px] text-pink-200 uppercase tracking-widest">
                 PASHA
               </div>
               <div>
@@ -303,15 +301,16 @@ export default function Home() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 -mt-4 space-y-6">
-        {/* 2. ÖNE ÇIKAN RESTORAN KARTI (KAPAK GÖRSELİ VEYA BANNER) */}
+        {/* 2. ÖNE ÇIKAN RESTORAN KARTI (YEMEK / KEBAP KAPAK GÖRSELİ GÜNCELLENDİ) */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
-          <div className="relative h-44 sm:h-52 bg-slate-900 overflow-hidden">
+          <div className="relative h-48 sm:h-56 bg-slate-950 overflow-hidden">
+            {/* Orijinal Demodaki Şiş Kebap / Dürüm / Soslar İçeren Görsel */}
             <img
-              src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"
-              alt="Pasha Cafe"
-              className="w-full h-full object-cover opacity-75"
+              src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1400&q=80"
+              alt="Pasha Cafe Kebap Dürüm"
+              className="w-full h-full object-cover object-center opacity-90"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
             
             {/* ÜCRETSİZ TESLİMAT ROZETİ */}
             <div className="absolute top-4 left-4 bg-[#b32657] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
@@ -326,8 +325,9 @@ export default function Home() {
                 </h1>
               </div>
 
-              <div className="flex items-center gap-1 bg-white/90 text-slate-900 px-2.5 py-1 rounded-xl text-xs font-black shadow-md">
-                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              {/* Demodaki Gibi Gri/Beyaz Kutulu Puan Rozeti */}
+              <div className="flex items-center gap-1 bg-white/90 text-slate-900 px-3 py-1 rounded-xl text-xs font-black shadow-md">
+                <Star className="w-3.5 h-3.5 text-slate-900 fill-slate-900" />
                 <span>4.8</span>
               </div>
             </div>
