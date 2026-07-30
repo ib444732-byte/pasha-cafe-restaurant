@@ -35,15 +35,12 @@ export default function LoginPage() {
     router.push("/admin/login");
   };
 
-  // Garanti Giriş Yapma İşlemi (Tüm numara formatlarını dener)
+  // Giriş Yapma İşlemi
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Sadece rakamları al
     const digitsOnly = phone.replace(/\D/g, "");
-
-    // 10 haneli versiyon (5301610759) ve 11 haneli versiyon (05301610759)
     const rawTenDigits = digitsOnly.startsWith("0") ? digitsOnly.substring(1) : digitsOnly;
     const rawElevenDigits = `0${rawTenDigits}`;
 
@@ -71,7 +68,7 @@ export default function LoginPage() {
     if (success) {
       router.push("/");
     } else {
-      alert("Giriş yapılamadı: Telefon numaranızı veya şifrenizi kontrol edin. (Eğer şifrenizi unuttuysanız yeniden kayıt olmayı deneyebilirsiniz)");
+      alert("Giriş başarısız: Telefon numaranızı veya şifrenizi kontrol ediniz.");
     }
   };
 
@@ -79,7 +76,7 @@ export default function LoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || !password || !fullName) {
-      alert("Lütfen tüm alanları doldurun.");
+      alert("Lütfen tüm alanları doldurunuz.");
       return;
     }
 
@@ -102,7 +99,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      alert("Kayıt olunamadı: " + error.message);
+      alert("Kayıt oluşturulamadı: " + error.message);
       setLoading(false);
       return;
     }
@@ -117,7 +114,7 @@ export default function LoginPage() {
         },
       ]);
 
-      alert("🎉 Kayıt başarıyla tamamlandı! Giriş yapılıyor...");
+      alert("🎉 Kaydınız başarıyla oluşturuldu! Yönlendiriliyorsunuz...");
       router.push("/");
     }
 
@@ -258,10 +255,10 @@ export default function LoginPage() {
           <div className="pt-0.5 pb-1">
             <button
               type="button"
-              onClick={() => alert("Şifrenizi hatırlamıyorsanız yeni bir kullanıcı ile Kayıt Ol sekmesinden kayıt olabilirsiniz.")}
-              className="text-xs text-white/90 hover:text-white underline font-bold drop-shadow"
+              onClick={() => setActiveTab("register")}
+              className="text-xs text-white/90 hover:text-white underline font-bold drop-shadow cursor-pointer"
             >
-              Şifremi unuttum
+              Hesabınız yok mu? Hemen Kayıt Olun
             </button>
           </div>
         )}
