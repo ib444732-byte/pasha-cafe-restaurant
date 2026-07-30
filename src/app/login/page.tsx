@@ -17,13 +17,31 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Telefon Numarasını Standart Formata Çevirme (Başındaki 0 ve boşlukları temizler)
+  // Telefon Numarasını Standart Formata Çevirme
   const formatPhoneNumber = (rawPhone: string) => {
-    let cleaned = rawPhone.replace(/\D/g, ""); // Sadece rakamları al
+    let cleaned = rawPhone.replace(/\D/g, "");
     if (cleaned.startsWith("0")) {
-      cleaned = cleaned.substring(1); // Baştaki 0'ı sil
+      cleaned = cleaned.substring(1);
     }
     return cleaned;
+  };
+
+  // Yönetici Giriş Linkine Tıklandığında Akıllı Yönlendirme
+  const handleAdminRedirect = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && profile.role === "admin") {
+        router.push("/admin");
+        return;
+      }
+    }
+    router.push("/admin/login");
   };
 
   // Giriş Yapma İşlemi
@@ -32,17 +50,14 @@ export default function LoginPage() {
     setLoading(true);
 
     const cleanPhone = formatPhoneNumber(phone);
-    
-    // Hem 0'lı hem 0'sız versiyonları deneyebilmek için email formatı
     const formattedEmail = `${cleanPhone}@pasha.com`;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: formattedEmail,
       password: password,
     });
 
     if (error) {
-      // Alternatif olarak başında 0 olan e-posta formatını da deneyelim
       const altEmail = `0${cleanPhone}@pasha.com`;
       const { error: altError } = await supabase.auth.signInWithPassword({
         email: altEmail,
@@ -70,7 +85,7 @@ export default function LoginPage() {
 
     setLoading(true);
     const cleanPhone = formatPhoneNumber(phone);
-    const formattedEmail = `0${cleanPhone}@pasha.com`; // Veritabanında başında 0 olan numara tutuluyor
+    const formattedEmail = `0${cleanPhone}@pasha.com`;
 
     const { data, error } = await supabase.auth.signUp({
       email: formattedEmail,
@@ -118,11 +133,15 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
-      {/* Sağ Üst Yönetici Girişi Linki */}
+      {/* Sağ Üst Akıllı Yönetici Girişi Linki */}
       <div className="absolute top-4 right-6 z-20 text-xs text-white/80 hover:text-white font-medium">
-        <Link href="/admin" className="flex items-center gap-1 hover:underline">
+        <button
+          type="button"
+          onClick={handleAdminRedirect}
+          className="flex items-center gap-1 hover:underline cursor-pointer"
+        >
           <ShieldCheck className="w-3.5 h-3.5" /> Yönetici Girişi
-        </Link>
+        </button>
       </div>
 
       <div className="relative max-w-md w-full space-y-3.5 text-center z-10 py-6">
