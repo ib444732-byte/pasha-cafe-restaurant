@@ -51,6 +51,7 @@ interface Product {
   price: number;
   category_id: string;
   image_url: string;
+  is_available?: boolean;
 }
 
 interface OrderItem {
@@ -279,6 +280,7 @@ export default function AdminPage() {
     const { data: prodData } = await supabase
       .from("products")
       .select("*")
+      .eq("is_available", true)
       .order("created_at", { ascending: false });
 
     if (prodData) setProducts(prodData);
@@ -413,13 +415,19 @@ export default function AdminPage() {
     }
   };
 
+  // Ürünü tamamen silmek yerine pasife çekiyoruz (Soft Delete) - Geçmiş sipariş ilişkileri bozulmaz
   const handleDeleteProduct = async (id: string, title: string) => {
-    if (!confirm(`"${title}" ürününü menüden silmek istediğinize emin misiniz?`)) return;
+    if (!confirm(`"${title}" ürününü menüden kaldırmak istediğinize emin misiniz?`)) return;
 
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const { error } = await supabase
+      .from("products")
+      .update({ is_available: false })
+      .eq("id", id);
+
     if (error) {
-      alert("Ürün silinirken hata: " + error.message);
+      alert("Ürün kaldırılırken hata: " + error.message);
     } else {
+      alert(`"${title}" menüden başarıyla kaldırıldı.`);
       fetchProducts();
     }
   };
@@ -610,7 +618,6 @@ export default function AdminPage() {
               <Users className="w-4 h-4" /> Kullanıcılar & Kuryeler
             </button>
 
-            {/* YENİ: YORUM YÖNETİMİ SEKMESİ */}
             <button
               onClick={() => setActiveTab("reviews")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap relative ${
@@ -1122,7 +1129,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => handleDeleteProduct(prod.id, prod.title)}
                         className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition"
-                        title="Ürünü Sil"
+                        title="Ürünü Kaldır"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
