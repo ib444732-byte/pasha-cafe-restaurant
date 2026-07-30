@@ -149,13 +149,24 @@ export default function Home() {
     });
   };
 
+  // KUSURSUZ VE GÜVENLİ ARAMA FİLTRESİ
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "all" || product.category_id === selectedCategory;
-    const matchesSearch =
-      product.title.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase().trim());
-    return matchesCategory && matchesSearch;
+
+    const searchLower = searchTerm.trim().toLocaleLowerCase('tr-TR');
+
+    if (!searchLower) return matchesCategory;
+
+    const titleMatches = (product.title || "")
+      .toLocaleLowerCase('tr-TR')
+      .includes(searchLower);
+
+    const descMatches = (product.description || "")
+      .toLocaleLowerCase('tr-TR')
+      .includes(searchLower);
+
+    return matchesCategory && (titleMatches || descMatches);
   });
 
   const cartTotal = cart.reduce(
@@ -282,7 +293,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Orta Arama Çubuğu */}
+          {/* CANLI ARAMA ÇUBUĞU */}
           <div className="relative pt-1">
             <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
             <input
@@ -290,7 +301,7 @@ export default function Home() {
               placeholder="Yemek, kategori veya malzeme ara"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white text-slate-900 placeholder-slate-400 rounded-full pl-11 pr-4 py-2.5 text-xs focus:outline-none shadow-md font-medium"
+              className="w-full bg-white text-slate-900 placeholder-slate-400 rounded-full pl-11 pr-10 py-2.5 text-xs focus:outline-none shadow-md font-medium"
             />
             {searchTerm && (
               <button
@@ -359,43 +370,45 @@ export default function Home() {
         </section>
 
         {/* 3. 🔥 ÇOK SATANLAR BÖLÜMÜ */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-orange-500 fill-orange-500" /> Çok Satanlar
-          </h2>
+        {!searchTerm && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-orange-500 fill-orange-500" /> Çok Satanlar
+            </h2>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-            {products.slice(0, 6).map((product) => (
-              <div
-                key={product.id}
-                className="w-40 sm:w-44 bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-sm shrink-0 flex flex-col justify-between"
-              >
-                <div className="relative h-28 w-full bg-slate-100 rounded-xl overflow-hidden mb-2">
-                  <img
-                    src={product.image_url || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"}
-                    alt={product.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+              {products.slice(0, 6).map((product) => (
+                <div
+                  key={product.id}
+                  className="w-40 sm:w-44 bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-sm shrink-0 flex flex-col justify-between"
+                >
+                  <div className="relative h-28 w-full bg-slate-100 rounded-xl overflow-hidden mb-2">
+                    <img
+                      src={product.image_url || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
 
-                <div>
-                  <h3 className="font-bold text-slate-800 text-xs truncate">{product.title}</h3>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="font-black text-[#ff1773] text-xs">
-                      {product.price.toFixed(2)} ₺
-                    </span>
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="w-6 h-6 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] transition shadow-sm"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-xs truncate">{product.title}</h3>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-black text-[#ff1773] text-xs">
+                        {product.price.toFixed(2)} ₺
+                      </span>
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="w-6 h-6 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] transition shadow-sm"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 4. KATEGORİ SEKMELERİ */}
         <section className="space-y-4">
@@ -431,7 +444,7 @@ export default function Home() {
             <div className="text-center py-12 text-xs text-slate-400 font-bold">Menü Yükleniyor...</div>
           ) : filteredProducts.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center text-xs text-slate-500 border border-slate-200">
-              {searchTerm ? `"${searchTerm}" ile eşleşen ürün bulunamadı.` : "Bu kategoride ürün bulunmuyor."}
+              {searchTerm ? `"${searchTerm}" aramasına uygun ürün bulunamadı.` : "Bu kategoride ürün bulunmuyor."}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
