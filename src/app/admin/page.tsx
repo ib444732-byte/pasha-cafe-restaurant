@@ -33,6 +33,9 @@ import {
   Settings,
   Building,
   Save,
+  MessageSquare,
+  Star,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -88,6 +91,19 @@ interface RestaurantSettings {
   has_free_delivery_limit: boolean;
 }
 
+interface Review {
+  id: string;
+  user_id: string;
+  order_id: string;
+  product_id?: string | null;
+  customer_name: string;
+  rating: number;
+  comment: string;
+  is_approved: boolean;
+  created_at: string;
+  products?: { title: string } | null;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +112,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   const [settings, setSettings] = useState<RestaurantSettings>({
     phone: "0474 212 10 15",
@@ -112,7 +129,7 @@ export default function AdminPage() {
   const [settingsLoading, setSettingsLoading] = useState(false);
 
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics" | "settings">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "addProduct" | "users" | "analytics" | "settings" | "reviews">("orders");
   const [orderSubTab, setOrderSubTab] = useState<"active" | "completed">("active");
 
   const getLocalDateString = (d: Date = new Date()) => {
@@ -181,6 +198,46 @@ export default function AdminPage() {
     fetchOrders();
     fetchProfiles();
     fetchSettings();
+    fetchReviews();
+  };
+
+  const fetchReviews = async () => {
+    const { data } = await supabase
+      .from("reviews")
+      .select("*, products(title)")
+      .order("created_at", { ascending: false });
+
+    if (data) setReviews(data as Review[]);
+  };
+
+  const handleApproveReview = async (reviewId: string) => {
+    const { error } = await supabase
+      .from("reviews")
+      .update({ is_approved: true })
+      .eq("id", reviewId);
+
+    if (!error) {
+      alert("Yorum onaylandı ve yayına alındı!");
+      fetchReviews();
+    } else {
+      alert("Hata oluştu: " + error.message);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm("Bu yorumu silmek istediğinize emin misiniz?")) return;
+
+    const { error } = await supabase
+      .from("reviews")
+      .delete()
+      .eq("id", reviewId);
+
+    if (!error) {
+      alert("Yorum silindi.");
+      fetchReviews();
+    } else {
+      alert("Hata oluştu: " + error.message);
+    }
   };
 
   const fetchSettings = async () => {
@@ -480,6 +537,8 @@ export default function AdminPage() {
     }
   };
 
+  const pendingReviewsCount = reviews.filter((r) => !r.is_approved).length;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -551,7 +610,23 @@ export default function AdminPage() {
               <Users className="w-4 h-4" /> Kullanıcılar & Kuryeler
             </button>
 
-            {/* RESTORAN AYARLARI SEKMESİ */}
+            {/* YENİ: YORUM YÖNETİMİ SEKMESİ */}
+            <button
+              onClick={() => setActiveTab("reviews")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap relative ${
+                activeTab === "reviews"
+                  ? "bg-pink-600 text-white shadow-lg shadow-pink-600/30"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" /> Yorumlar
+              {pendingReviewsCount > 0 && (
+                <span className="bg-amber-500 text-slate-950 font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center ml-1">
+                  {pendingReviewsCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setActiveTab("settings")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
@@ -1110,7 +1185,90 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ⚙️ 5. SEKME: RESTORAN & TESLİMAT AYARLARI */}
+        {/* 💬 5. SEKME: YORUM YÖNETİMİ & ONAY ALANI */}
+        {activeTab === "reviews" && (
+          <div className="space-y-4 max-w-3xl mx-auto">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-pink-500" /> Müşteri Yorumları & Onay Bekleyenler ({reviews.length})
+            </h2>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-xl">
+              {reviews.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-6">Henüz yapılmış bir değerlendirme bulunmuyor.</p>
+              ) : (
+                reviews.map((rev) => (
+                  <div
+                    key={rev.id}
+                    className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-white text-sm">{rev.customer_name}</span>
+                        <span className="text-[10px] text-slate-500 ml-2">
+                          {formatDateTime(rev.created_at).date} - {formatDateTime(rev.created_at).time}
+                        </span>
+                      </div>
+
+                      <span
+                        className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase border ${
+                          rev.is_approved
+                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                        }`}
+                      >
+                        {rev.is_approved ? "ONAYLANDI (Yayında)" : "ONAY BEKLİYOR"}
+                      </span>
+                    </div>
+
+                    {/* Yıldız Puanı */}
+                    <div className="flex items-center gap-1 text-amber-400">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-3.5 h-3.5 ${
+                            s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"
+                          }`}
+                        />
+                      ))}
+                      <span className="text-slate-400 font-bold ml-1">{rev.rating}/5</span>
+                      {rev.products?.title && (
+                        <span className="text-pink-400 font-bold ml-2">
+                          • Ürün: {rev.products.title}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Yorum Metni */}
+                    <p className="text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800 italic leading-relaxed">
+                      "{rev.comment}"
+                    </p>
+
+                    {/* Aksiyon Butonları */}
+                    <div className="flex justify-end items-center gap-2 pt-1">
+                      {!rev.is_approved && (
+                        <button
+                          onClick={() => handleApproveReview(rev.id)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Onayla & Yayınla
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDeleteReview(rev.id)}
+                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs px-3 py-1.5 rounded-xl border border-red-500/20 transition flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Sil
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ⚙️ 6. SEKME: RESTORAN & TESLİMAT AYARLARI */}
         {activeTab === "settings" && (
           <div className="space-y-4 max-w-2xl mx-auto">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">

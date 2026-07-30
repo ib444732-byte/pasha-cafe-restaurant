@@ -20,6 +20,8 @@ import {
   Utensils,
   ShoppingCart,
   Trash2,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
@@ -53,6 +55,20 @@ interface RestaurantSettings {
   free_delivery_text: string;
   free_delivery_limit: number;
   has_free_delivery_limit: boolean;
+}
+
+interface ApprovedReview {
+  id: string;
+  customer_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+}
+
+interface DeliveredOrder {
+  id: string;
+  created_at: string;
+  order_items: { product_id: string; product_title: string }[];
 }
 
 // Türkiye İl & Kars İlçe/Mahalle Veri Yapısı
@@ -111,7 +127,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
 
-  // Dinamik Restoran Ayarları State'i
+  // Dinamik Restoran Ayarları & Onaylı Yorumlar
   const [settings, setSettings] = useState<RestaurantSettings>({
     phone: "0474 212 10 15",
     address: "Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95",
@@ -121,6 +137,18 @@ export default function Home() {
     free_delivery_limit: 200,
     has_free_delivery_limit: true,
   });
+
+  const [approvedReviews, setApprovedReviews] = useState<ApprovedReview[]>([]);
+  const [averageRating, setAverageRating] = useState<number>(4.8);
+
+  // Müşterinin Tamamlanan Siparişleri ve Yorum Modal State'i
+  const [deliveredOrders, setDeliveredOrders] = useState<DeliveredOrder[]>([]);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedOrderForReview, setSelectedOrderDetailsForReview] = useState<DeliveredOrder | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [selectedProductIdForReview, setSelectedProductIdForReview] = useState<string | null>(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -151,6 +179,7 @@ export default function Home() {
     fetchData();
     checkUserSession();
     fetchSettings();
+    fetchApprovedReviews();
 
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -171,6 +200,24 @@ export default function Home() {
     if (data) setSettings(data);
   };
 
+  const fetchApprovedReviews = async () => {
+    const { data } = await supabase
+      .from("reviews")
+      .select("id, customer_name, rating, comment, created_at")
+      .eq("is_approved", true)
+      .order("created_at", { ascending: false });
+
+    if (data && data.length > 0) {
+      setApprovedReviews(data);
+      // SADECE ONAYLANAN YORUMLARIN ORTALAMASI
+      const totalRating = data.reduce((sum, item) => sum + item.rating, 0);
+      const avg = totalRating / data.length;
+      setAverageRating(Number(avg.toFixed(1)));
+    } else {
+      setAverageRating(4.8); // Varsayılan puan
+    }
+  };
+
   const checkUserSession = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -189,7 +236,21 @@ export default function Home() {
         }
         if (profile.phone) setCustomerPhone(profile.phone);
       }
+
+      // Kullanıcının "Teslim Edildi" siparişlerini kontrol et
+      fetchUserDeliveredOrders(user.id);
     }
+  };
+
+  const fetchUserDeliveredOrders = async (userId: string) => {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, created_at, order_items(product_id, product_title)")
+      .eq("user_id", userId)
+      .eq("status", "teslim_edildi")
+      .order("created_at", { ascending: false });
+
+    if (data) setDeliveredOrders(data as DeliveredOrder[]);
   };
 
   const handleLogout = async () => {
@@ -197,6 +258,7 @@ export default function Home() {
     setCurrentUser(null);
     setProfileName("Misafir");
     setIsAdmin(false);
+    setDeliveredOrders([]);
   };
 
   const fetchData = async () => {
@@ -382,6 +444,43 @@ export default function Home() {
     router.push(`/order-success?id=${orderData.id}`);
   };
 
+  // Yorum Gönderme Fonksiyonu
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !selectedOrderForReview) return;
+
+    if (!reviewComment.trim()) {
+      alert("Lütfen bir yorum yazın.");
+      return;
+    }
+
+    setSubmittingReview(true);
+
+    const { error } = await supabase.from("reviews").insert([
+      {
+        user_id: currentUser.id,
+        order_id: selectedOrderForReview.id,
+        product_id: selectedProductIdForReview,
+        customer_name: profileName !== "Misafir" ? profileName : "Müşteri",
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        is_approved: false, // Onaya Düşecek
+      },
+    ]);
+
+    setSubmittingReview(false);
+
+    if (error) {
+      alert("Yorum gönderilirken hata oluştu: " + error.message);
+    } else {
+      alert("🎉 Yorumunuz alındı! Yönetici onayından sonra yayınlanacaktır. Teşekkür ederiz!");
+      setReviewModalOpen(false);
+      setReviewComment("");
+      setReviewRating(5);
+      setSelectedProductIdForReview(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans pb-28">
       {/* 1. ÜST HEADER */}
@@ -400,6 +499,20 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Teslim Edilen Sipariş Varsa Değerlendir Butonu */}
+              {deliveredOrders.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSelectedOrderDetailsForReview(deliveredOrders[0]);
+                    setReviewModalOpen(true);
+                  }}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black px-3.5 py-2 rounded-full transition shadow-md flex items-center gap-1.5"
+                >
+                  <Star className="w-4 h-4 fill-slate-950" />
+                  <span>Siparişi Değerlendir</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setIsCartDrawerOpen(true)}
                 className="relative bg-white text-[#ff1773] hover:bg-slate-100 text-xs font-black px-4 py-2 rounded-full transition shadow-md flex items-center gap-1.5"
@@ -557,9 +670,10 @@ export default function Home() {
                 </h1>
               </div>
 
+              {/* CANLI PUAN ORTALAMASI (SADECE ONAYLI YORUMLARDAN HESAPLANIR) */}
               <div className="flex items-center gap-1.5 bg-white/95 text-slate-900 px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg">
-                <Star className="w-4 h-4 text-slate-900 fill-slate-900" />
-                <span>4.8</span>
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span>{averageRating}</span>
               </div>
             </div>
           </div>
@@ -581,6 +695,40 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* ONAYLANMIŞ MÜŞTERİ YORUMLARI BÖLÜMÜ */}
+        {approvedReviews.length > 0 && !searchTerm && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4 text-[#ff1773]" /> Müşteri Yorumları ({approvedReviews.length})
+            </h2>
+
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+              {approvedReviews.map((rev) => (
+                <div
+                  key={rev.id}
+                  className="w-64 bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm shrink-0 flex flex-col justify-between space-y-2"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs">{rev.customer_name}</span>
+                      <div className="flex items-center gap-0.5 text-amber-400">
+                        <Star className="w-3 h-3 fill-amber-400" />
+                        <span className="text-[11px] font-black text-slate-700">{rev.rating}.0</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-3 italic">
+                      "{rev.comment}"
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium text-right block">
+                    {new Date(rev.created_at).toLocaleDateString("tr-TR")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ÇOK SATANLAR BÖLÜMÜ */}
         {!searchTerm && (
@@ -1009,6 +1157,88 @@ export default function Home() {
                   {submitting ? "Gönderiliyor..." : "Siparişi Onayla"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ⭐ MÜŞTERİ YORUM YAPMA MODALI */}
+      {reviewModalOpen && selectedOrderForReview && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800">
+            <button
+              onClick={() => setReviewModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-black text-[#ff1773] flex items-center gap-2">
+              <Star className="w-5 h-5 fill-[#ff1773]" /> Siparişi Değerlendir
+            </h3>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
+              {/* Ürün Seçimi (Opsiyonel) */}
+              {selectedOrderForReview.order_items && selectedOrderForReview.order_items.length > 0 && (
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1">Değerlendirilecek Alan</label>
+                  <select
+                    value={selectedProductIdForReview || ""}
+                    onChange={(e) => setSelectedProductIdForReview(e.target.value || null)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-[#ff1773]"
+                  >
+                    <option value="">Genel Restoran Değerlendirmesi</option>
+                    {selectedOrderForReview.order_items.map((item) => (
+                      <option key={item.product_id} value={item.product_id}>
+                        Ürün: {item.product_title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Yıldız Seçimi */}
+              <div>
+                <label className="block font-bold text-slate-600 mb-1">Puanınız</label>
+                <div className="flex gap-2 text-amber-400 justify-center py-2 bg-amber-50/50 rounded-2xl border border-amber-100">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="p-1 hover:scale-110 transition"
+                    >
+                      <Star
+                        className={`w-7 h-7 ${
+                          star <= reviewRating ? "fill-amber-400 text-amber-400" : "text-slate-300"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Yorum Metni */}
+              <div>
+                <label className="block font-bold text-slate-600 mb-1">Yorumunuz</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Yemekler ve servis nasıldı? Düşüncelerinizi paylaşın..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:border-[#ff1773] resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submittingReview}
+                className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+              >
+                <Send className="w-4 h-4" />
+                {submittingReview ? "Gönderiliyor..." : "Değerlendirmeyi Gönder"}
+              </button>
             </form>
           </div>
         </div>
