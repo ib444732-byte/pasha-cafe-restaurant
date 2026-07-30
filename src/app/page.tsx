@@ -350,10 +350,7 @@ export default function Home() {
                     {searchSuggestions.map((product) => (
                       <div
                         key={product.id}
-                        onClick={() => {
-                          setSearchTerm(product.title);
-                          setIsSearchOpen(false);
-                        }}
+                        onClick={() => router.push(`/product/${product.id}`)}
                         className="p-3.5 hover:bg-pink-50/40 transition flex items-center justify-between cursor-pointer group"
                       >
                         <div className="flex items-center gap-3.5">
@@ -470,27 +467,32 @@ export default function Home() {
                   key={product.id}
                   className="w-40 sm:w-44 bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-sm shrink-0 flex flex-col justify-between"
                 >
-                  <div className="relative h-28 w-full bg-slate-100 rounded-xl overflow-hidden mb-2">
-                    <img
-                      src={product.image_url || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
+                  <div 
+                    onClick={() => router.push(`/product/${product.id}`)}
+                    className="cursor-pointer group"
+                  >
+                    <div className="relative h-28 w-full bg-slate-100 rounded-xl overflow-hidden mb-2">
+                      <img
+                        src={product.image_url || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"}
+                        alt={product.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-xs truncate group-hover:text-[#ff1773] transition">
+                      {product.title}
+                    </h3>
                   </div>
 
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-xs truncate">{product.title}</h3>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="font-black text-[#ff1773] text-xs">
-                        {product.price.toFixed(2)} ₺
-                      </span>
-                      <button
-                        onClick={() => addToCart(product)}
-                        className="w-6 h-6 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] transition shadow-sm"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="font-black text-[#ff1773] text-xs">
+                      {product.price.toFixed(2)} ₺
+                    </span>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="w-6 h-6 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] transition shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -553,21 +555,27 @@ export default function Home() {
                       <Heart className={`w-4 h-4 ${isFav ? "text-red-500 fill-red-500" : ""}`} />
                     </button>
 
-                    <div className="relative h-32 sm:h-36 w-full rounded-xl overflow-hidden bg-slate-100 mb-2">
-                      <img
-                        src={product.image_url || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"}
-                        alt={product.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      />
-                    </div>
+                    {/* Tıklanınca Ürün Detayına Gitme Alanı */}
+                    <div
+                      onClick={() => router.push(`/product/${product.id}`)}
+                      className="cursor-pointer"
+                    >
+                      <div className="relative h-32 sm:h-36 w-full rounded-xl overflow-hidden bg-slate-100 mb-2">
+                        <img
+                          src={product.image_url || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"}
+                          alt={product.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        />
+                      </div>
 
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">
-                        {product.title}
-                      </h3>
-                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
-                        {product.description || "Nefis taze malzeme."}
-                      </p>
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1 group-hover:text-[#ff1773] transition">
+                          {product.title}
+                        </h3>
+                        <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
+                          {product.description || "Nefis taze malzeme."}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100">
