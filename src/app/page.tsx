@@ -247,8 +247,9 @@ export default function Home() {
                 PASHA
               </div>
               <div>
-                <p className="text-[11px] text-pink-100 font-medium">Merhaba, misafir</p>
-                <p className="text-sm font-black text-white">{profileName}</p>
+                <p className="text-base font-black text-white">
+                  Merhaba{currentUser && profileName !== "Misafir" ? `, ${profileName}` : ""}
+                </p>
               </div>
             </div>
 
