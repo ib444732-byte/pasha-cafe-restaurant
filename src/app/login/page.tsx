@@ -17,16 +17,7 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Telefon Numarasını Standart Formata Çevirme
-  const formatPhoneNumber = (rawPhone: string) => {
-    let cleaned = rawPhone.replace(/\D/g, "");
-    if (cleaned.startsWith("0")) {
-      cleaned = cleaned.substring(1);
-    }
-    return cleaned;
-  };
-
-  // Yönetici Giriş Linkine Tıklandığında Akıllı Yönlendirme
+  // Akıllı Yönetici Girişi Yönlendirmesi
   const handleAdminRedirect = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -44,35 +35,44 @@ export default function LoginPage() {
     router.push("/admin/login");
   };
 
-  // Giriş Yapma İşlemi
+  // Garanti Giriş Yapma İşlemi (Tüm numara formatlarını dener)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const cleanPhone = formatPhoneNumber(phone);
-    const formattedEmail = `${cleanPhone}@pasha.com`;
+    // Sadece rakamları al
+    const digitsOnly = phone.replace(/\D/g, "");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: formattedEmail,
-      password: password,
-    });
+    // 10 haneli versiyon (5301610759) ve 11 haneli versiyon (05301610759)
+    const rawTenDigits = digitsOnly.startsWith("0") ? digitsOnly.substring(1) : digitsOnly;
+    const rawElevenDigits = `0${rawTenDigits}`;
 
-    if (error) {
-      const altEmail = `0${cleanPhone}@pasha.com`;
-      const { error: altError } = await supabase.auth.signInWithPassword({
-        email: altEmail,
+    const candidateEmails = [
+      `${rawTenDigits}@pasha.com`,
+      `${rawElevenDigits}@pasha.com`,
+    ];
+
+    let success = false;
+
+    for (const email of candidateEmails) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email,
         password: password,
       });
 
-      if (altError) {
-        setLoading(false);
-        alert("Giriş yapılamadı: Telefon numaranızı veya şifrenizi kontrol edin.");
-        return;
+      if (!error) {
+        success = true;
+        break;
       }
     }
 
     setLoading(false);
-    router.push("/");
+
+    if (success) {
+      router.push("/");
+    } else {
+      alert("Giriş yapılamadı: Telefon numaranızı veya şifrenizi kontrol edin. (Eğer şifrenizi unuttuysanız yeniden kayıt olmayı deneyebilirsiniz)");
+    }
   };
 
   // Kayıt Olma İşlemi
@@ -84,8 +84,11 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const cleanPhone = formatPhoneNumber(phone);
-    const formattedEmail = `0${cleanPhone}@pasha.com`;
+
+    const digitsOnly = phone.replace(/\D/g, "");
+    const rawTenDigits = digitsOnly.startsWith("0") ? digitsOnly.substring(1) : digitsOnly;
+    const formattedPhone = `0${rawTenDigits}`;
+    const formattedEmail = `${rawTenDigits}@pasha.com`;
 
     const { data, error } = await supabase.auth.signUp({
       email: formattedEmail,
@@ -93,7 +96,7 @@ export default function LoginPage() {
       options: {
         data: {
           full_name: fullName,
-          phone: `0${cleanPhone}`,
+          phone: formattedPhone,
         },
       },
     });
@@ -105,11 +108,11 @@ export default function LoginPage() {
     }
 
     if (data.user) {
-      await supabase.from("profiles").insert([
+      await supabase.from("profiles").upsert([
         {
           id: data.user.id,
           full_name: fullName,
-          phone: `0${cleanPhone}`,
+          phone: formattedPhone,
           role: "customer",
         },
       ]);
@@ -133,7 +136,7 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
-      {/* Sağ Üst Akıllı Yönetici Girişi Linki */}
+      {/* Sağ Üst Yönetici Girişi Linki */}
       <div className="absolute top-4 right-6 z-20 text-xs text-white/80 hover:text-white font-medium">
         <button
           type="button"
@@ -255,7 +258,7 @@ export default function LoginPage() {
           <div className="pt-0.5 pb-1">
             <button
               type="button"
-              onClick={() => alert("Lütfen restoran yönetimi ile iletişime geçin.")}
+              onClick={() => alert("Şifrenizi hatırlamıyorsanız yeni bir kullanıcı ile Kayıt Ol sekmesinden kayıt olabilirsiniz.")}
               className="text-xs text-white/90 hover:text-white underline font-bold drop-shadow"
             >
               Şifremi unuttum
