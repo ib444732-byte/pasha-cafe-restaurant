@@ -98,6 +98,19 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
+          {/* KVKK VE GİZLİLİK POLİTİKASI ONAY KUTUSU */}
+          <div className="flex items-start gap-2 pt-1">
+            <input
+              type="checkbox"
+              required
+              id="adminKvkk"
+              className="mt-0.5 accent-[#ff1773] cursor-pointer"
+            />
+            <label htmlFor="adminKvkk" className="text-[11px] text-slate-400 leading-tight cursor-pointer">
+              <Link href="/legal?type=kvkk" target="_blank" className="text-[#ff1773] font-bold underline">KVKK Aydınlatma Metni</Link>'ni ve <Link href="/legal?type=gizlilik" target="_blank" className="text-[#ff1773] font-bold underline">Gizlilik Politikası</Link>'nı okudum, onaylıyorum.
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
