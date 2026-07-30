@@ -132,7 +132,7 @@ export default function Home() {
 
   const [approvedReviews, setApprovedReviews] = useState<ApprovedReview[]>([]);
   const [averageRating, setAverageRating] = useState<number>(4.8);
-  const [reviewsModalOpen, setReviewsModalOpen] = useState(false); // Puan rozetine basınca açılan modal
+  const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -426,7 +426,6 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* GEÇMİŞ SİPARİŞLERİM BUTONU */}
               {currentUser && (
                 <Link
                   href="/orders"
@@ -778,6 +777,18 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* ŞIK YASAL BİLGİLENDİRME FOOTER ALANI */}
+        <footer className="max-w-6xl mx-auto px-4 md:px-8 py-8 mt-12 border-t border-slate-200 text-center space-y-3">
+          <p className="text-xs font-bold text-slate-700">Pasha Cafe & Restaurant © 2026 Tüm Hakları Saklıdır.</p>
+          <div className="flex flex-wrap justify-center gap-4 text-[11px] font-semibold text-slate-500">
+            <Link href="/legal?type=kvkk" className="hover:text-[#ff1773] transition">KVKK Aydınlatma Metni</Link>
+            <span>•</span>
+            <Link href="/legal?type=gizlilik" className="hover:text-[#ff1773] transition">Gizlilik Politikası</Link>
+            <span>•</span>
+            <Link href="/legal?type=cerez" className="hover:text-[#ff1773] transition">Çerez Politikası</Link>
+          </div>
+        </footer>
       </main>
 
       {/* ⭐ PUANA TIKLAYINCA AÇILAN YORUMLAR MODALI */}
@@ -1056,6 +1067,19 @@ export default function Home() {
                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-[#ff1773]"
                   />
                 </div>
+              </div>
+
+              {/* KVKK ONAY KUTUSU (CHECKBOX) */}
+              <div className="flex items-start gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  required
+                  id="kvkkCheck"
+                  className="mt-0.5 accent-[#ff1773] cursor-pointer"
+                />
+                <label htmlFor="kvkkCheck" className="text-[11px] text-slate-500 leading-tight cursor-pointer">
+                  <Link href="/legal?type=kvkk" target="_blank" className="text-[#ff1773] font-bold underline">KVKK Aydınlatma Metni</Link>'ni ve <Link href="/legal?type=gizlilik" target="_blank" className="text-[#ff1773] font-bold underline">Gizlilik Politikası</Link>'nı okudum, onaylıyorum.
+                </label>
               </div>
 
               <div>
