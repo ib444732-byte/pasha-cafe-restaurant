@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Phone, Lock, User, ShoppingBag, ShieldCheck, PhoneCall, MapPin } from "lucide-react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,15 +49,14 @@ export default function LoginPage() {
 
     if (profile) {
       if (profile.role === "courier") {
-        router.push("/courier"); // Kurye paneline yönlendir
+        router.push("/courier");
         return;
       } else if (profile.role === "admin") {
-        router.push("/admin"); // Admin paneline yönlendir
+        router.push("/admin");
         return;
       }
     }
     
-    // Varsayılan müşteri rolü
     router.push("/");
   };
 
@@ -91,7 +91,6 @@ export default function LoginPage() {
     setLoading(false);
 
     if (loggedInUser) {
-      // Kullanıcının rolünü kontrol etip doğru panele uçuruyoruz
       await redirectUserByRole(loggedInUser.id);
     } else {
       alert("Giriş başarısız: Telefon numaranızı veya şifrenizi kontrol ediniz.");
@@ -209,8 +208,9 @@ export default function LoginPage() {
 
         {/* MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU */}
         <button
+          type="button"
           onClick={() => router.push("/")}
-          className="w-full bg-[#edf4fb] hover:bg-white text-slate-900 font-extrabold text-sm py-3.5 rounded-full transition shadow-xl flex items-center justify-center gap-2 border border-white/80"
+          className="w-full bg-[#edf4fb] hover:bg-white text-slate-900 font-extrabold text-sm py-3.5 rounded-full transition shadow-xl flex items-center justify-center gap-2 border border-white/80 cursor-pointer"
         >
           <ShoppingBag className="w-4 h-4 text-slate-700" /> Misafir Olarak Devam Et
         </button>
@@ -220,7 +220,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setActiveTab("login")}
-            className={`flex-1 py-2.5 rounded-full text-xs sm:text-sm font-black transition ${
+            className={`flex-1 py-2.5 rounded-full text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === "login"
                 ? "bg-[#334155] text-white shadow-md"
                 : "text-slate-600 hover:text-slate-900"
@@ -231,7 +231,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setActiveTab("register")}
-            className={`flex-1 py-2.5 rounded-full text-xs sm:text-sm font-black transition ${
+            className={`flex-1 py-2.5 rounded-full text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === "register"
                 ? "bg-[#334155] text-white shadow-md"
                 : "text-slate-600 hover:text-slate-900"
@@ -301,11 +301,24 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* KVKK VE GİZLİLİK POLİTİKASI ONAY KUTUSU */}
+          <div className="flex items-start gap-2 px-2 text-left pt-0.5">
+            <input
+              type="checkbox"
+              required
+              id="userKvkk"
+              className="mt-0.5 accent-[#ff1773] cursor-pointer"
+            />
+            <label htmlFor="userKvkk" className="text-[11px] text-white leading-tight cursor-pointer drop-shadow-sm font-medium">
+              <Link href="/legal?type=kvkk" target="_blank" className="text-pink-300 font-bold underline">KVKK Aydınlatma Metni</Link>'ni ve <Link href="/legal?type=gizlilik" target="_blank" className="text-pink-300 font-bold underline">Gizlilik Politikası</Link>'nı okudum, onaylıyorum.
+            </label>
+          </div>
+
           {/* GİRİŞ / KAYIT BUTONU */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black text-sm py-4 rounded-full transition shadow-2xl mt-1 tracking-wide uppercase"
+            className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black text-sm py-4 rounded-full transition shadow-2xl mt-1 tracking-wide uppercase cursor-pointer"
           >
             {loading
               ? "İşlem yapılıyor..."
