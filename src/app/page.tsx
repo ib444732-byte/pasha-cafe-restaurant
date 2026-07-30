@@ -18,6 +18,8 @@ import {
   ShieldCheck,
   LogOut,
   Utensils,
+  ShoppingCart,
+  Trash2,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
@@ -62,7 +64,10 @@ export default function Home() {
   const [profileName, setProfileName] = useState("Misafir");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Modal State
+  // Sepet Çekmecesi (Drawer) State'i
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+
+  // Sipariş Modalı State'i
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -161,6 +166,10 @@ export default function Home() {
     });
   };
 
+  const clearCart = () => {
+    setCart([]);
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "all" || product.category_id === selectedCategory;
@@ -188,6 +197,8 @@ export default function Home() {
       ).slice(0, 5)
     : [];
 
+  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
   const cartTotal = cart.reduce(
     (total, item) => total + item.product.price * item.quantity,
     0
@@ -198,6 +209,7 @@ export default function Home() {
       router.push("/login");
       return;
     }
+    setIsCartDrawerOpen(false);
     setIsModalOpen(true);
   };
 
@@ -283,8 +295,22 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Sağ Üst Giriş / Kayıt Butonu */}
+            {/* Sağ Üst Butonlar (Yönetim, Sepetim, Giriş/Çıkış) */}
             <div className="flex items-center gap-2">
+              {/* 🛒 SEPETİM BUTONU */}
+              <button
+                onClick={() => setIsCartDrawerOpen(true)}
+                className="relative bg-white text-[#ff1773] hover:bg-slate-100 text-xs font-black px-4 py-2 rounded-full transition shadow-md flex items-center gap-1.5"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>Sepetim</span>
+                {totalCartCount > 0 && (
+                  <span className="bg-slate-900 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black ml-0.5">
+                    {totalCartCount}
+                  </span>
+                )}
+              </button>
+
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -297,14 +323,14 @@ export default function Home() {
               {currentUser ? (
                 <button
                   onClick={handleLogout}
-                  className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition flex items-center gap-1.5"
+                  className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3.5 py-2 rounded-full transition flex items-center gap-1.5"
                 >
                   <LogOut className="w-3.5 h-3.5" /> Çıkış
                 </button>
               ) : (
                 <Link
                   href="/login"
-                  className="bg-white text-[#ff1773] hover:bg-slate-100 text-xs font-black px-5 py-2 rounded-full transition shadow-sm flex items-center gap-1.5"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-black px-4 py-2 rounded-full transition shadow-sm flex items-center gap-1.5"
                 >
                   Giriş / Kayıt →
                 </Link>
@@ -312,7 +338,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CANLI VE DAHA BÜYÜK ÖNERİLİ ARAMA ÇUBUĞU */}
+          {/* CANLI ARAMA ÇUBUĞU */}
           <div className="relative pt-1 z-30" ref={searchRef}>
             <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
             <input
@@ -338,7 +364,7 @@ export default function Home() {
               </button>
             )}
 
-            {/* 🎯 BÜYÜTÜLMÜŞ ÖNERİ PANELİ (DROPDOWN) */}
+            {/* 🎯 OTOMATİK ÖNERİ PANELİ (DROPDOWN) */}
             {isSearchOpen && searchTerm.trim().length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-slate-800">
                 <div className="p-3 border-b border-slate-100 text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 bg-slate-50/50">
@@ -624,11 +650,112 @@ export default function Home() {
             <p className="text-xl font-black">{cartTotal.toFixed(2)} ₺</p>
           </div>
           <button
-            onClick={handleOpenOrderModal}
+            onClick={() => setIsCartDrawerOpen(true)}
             className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md"
           >
-            Siparişi Tamamla <ShoppingBag className="w-4 h-4 text-pink-400" />
+            Sepetimi Gör <ShoppingCart className="w-4 h-4 text-pink-400" />
           </button>
+        </div>
+      )}
+
+      {/* 🛒 SAĞDAN AÇILAN SEPET ÇEKMECESİ (DRAWER) */}
+      {isCartDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
+          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between relative animation-slide-left">
+            {/* Çekmece Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-[#ff1773]" />
+                <h2 className="font-black text-slate-900 text-base">Sepetim ({totalCartCount})</h2>
+              </div>
+              <button
+                onClick={() => setIsCartDrawerOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Çekmece Ürün Listesi */}
+            <div className="flex-1 overflow-y-auto p-5 divide-y divide-slate-100">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-3 text-slate-400 py-12">
+                  <div className="w-16 h-16 rounded-full bg-pink-50 flex items-center justify-center text-[#ff1773]">
+                    <ShoppingCart className="w-8 h-8" />
+                  </div>
+                  <p className="font-bold text-sm text-slate-600">Sepetiniz henüz boş</p>
+                  <p className="text-xs max-w-xs">Lezzetli yemeklerimizden hemen sepetinize ekleyebilirsiniz.</p>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.product.id} className="py-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={
+                          item.product.image_url ||
+                          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"
+                        }
+                        alt={item.product.title}
+                        className="w-14 h-14 rounded-2xl object-cover shrink-0"
+                      />
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm line-clamp-1">
+                          {item.product.title}
+                        </h4>
+                        <p className="text-xs font-black text-[#ff1773] mt-0.5">
+                          {(item.product.price * item.quantity).toFixed(2)} ₺
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Adet Değiştirme */}
+                    <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                      <button
+                        onClick={() => removeFromCart(item.product.id)}
+                        className="w-6 h-6 rounded-lg bg-white text-[#ff1773] font-black text-xs flex items-center justify-center shadow-sm"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-xs font-black px-1.5">{item.quantity}</span>
+                      <button
+                        onClick={() => addToCart(item.product)}
+                        className="w-6 h-6 rounded-lg bg-[#ff1773] text-white font-black text-xs flex items-center justify-center shadow-sm"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Çekmece Footer & Siparişe Geç Butonu */}
+            {cart.length > 0 && (
+              <div className="p-5 border-t border-slate-100 bg-slate-50/80 space-y-3">
+                <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
+                  <button
+                    onClick={clearCart}
+                    className="text-slate-400 hover:text-red-500 flex items-center gap-1 font-bold transition text-xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Sepeti Temizle
+                  </button>
+                  <span className="font-bold text-slate-700">Teslimat Ücreti: ÜCRETSİZ</span>
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-xs font-extrabold text-slate-500 uppercase">Ara Toplam</span>
+                  <span className="text-xl font-black text-[#ff1773]">{cartTotal.toFixed(2)} ₺</span>
+                </div>
+
+                <button
+                  onClick={handleOpenOrderModal}
+                  className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black py-3.5 rounded-2xl transition shadow-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  Siparişi Onayla <ShoppingBag className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
