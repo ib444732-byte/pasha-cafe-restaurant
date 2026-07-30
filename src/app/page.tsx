@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -17,6 +17,7 @@ import {
   X,
   ShieldCheck,
   LogOut,
+  Utensils,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
@@ -50,8 +51,11 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false); // Arama Öneri Paneli
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
+
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Kullanıcı Oturumu
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -69,6 +73,15 @@ export default function Home() {
   useEffect(() => {
     fetchData();
     checkUserSession();
+
+    // Dışarı tıklanınca arama öneri kutusunu kapatma
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const checkUserSession = async () => {
@@ -168,6 +181,15 @@ export default function Home() {
 
     return matchesCategory && (titleMatches || descMatches);
   });
+
+  // CANLI ARAMA ÖNERİLERİ (AÇILIR KUTU İÇİN)
+  const searchSuggestions = searchTerm.trim()
+    ? products.filter((p) =>
+        (p.title || "")
+          .toLocaleLowerCase('tr-TR')
+          .includes(searchTerm.trim().toLocaleLowerCase('tr-TR'))
+      ).slice(0, 5) // Maksimum 5 öneri göster
+    : [];
 
   const cartTotal = cart.reduce(
     (total, item) => total + item.product.price * item.quantity,
@@ -293,23 +315,92 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CANLI ARAMA ÇUBUĞU */}
-          <div className="relative pt-1">
+          {/* CANLI VE AÇILIR ÖNERİLİ ARAMA ÇUBUĞU */}
+          <div className="relative pt-1 z-30" ref={searchRef}>
             <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Yemek, kategori veya malzeme ara"
+              placeholder="Yemek, kategori veya malzeme ara (Örn: Hamburger)"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setIsSearchOpen(true)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setIsSearchOpen(true);
+              }}
               className="w-full bg-white text-slate-900 placeholder-slate-400 rounded-full pl-11 pr-10 py-2.5 text-xs focus:outline-none shadow-md font-medium"
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm("")}
+                onClick={() => {
+                  setSearchTerm("");
+                  setIsSearchOpen(false);
+                }}
                 className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
               >
                 <X className="w-4 h-4" />
               </button>
+            )}
+
+            {/* 🎯 OTOMATİK TAHMİN / ÖNERİ PANELİ (DROPDOWN) */}
+            {isSearchOpen && searchTerm.trim().length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-slate-800">
+                <div className="p-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Utensils className="w-3 h-3 text-[#ff1773]" /> Arama Önerileri
+                </div>
+
+                {searchSuggestions.length > 0 ? (
+                  <div className="divide-y divide-slate-100">
+                    {searchSuggestions.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => {
+                          setSearchTerm(product.title);
+                          setIsSearchOpen(false);
+                        }}
+                        className="p-2.5 hover:bg-slate-50 transition flex items-center justify-between cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={
+                              product.image_url ||
+                              "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"
+                            }
+                            alt={product.title}
+                            className="w-10 h-10 rounded-xl object-cover"
+                          />
+                          <div>
+                            <p className="text-xs font-bold text-slate-900 group-hover:text-[#ff1773] transition">
+                              {product.title}
+                            </p>
+                            <p className="text-[10px] text-slate-400 line-clamp-1">
+                              {product.description || "Lezzetli seçim"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-[#ff1773]">
+                            {product.price.toFixed(2)} ₺
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product);
+                            }}
+                            className="w-7 h-7 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] shadow-sm transition"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                    "{searchTerm}" ile eşleşen bir yemek bulunamadı.
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
