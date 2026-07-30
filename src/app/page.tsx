@@ -71,7 +71,6 @@ interface DeliveredOrder {
   order_items: { product_id: string; product_title: string }[];
 }
 
-// Türkiye İl & Kars İlçe/Mahalle Veri Yapısı
 const IL_LISTESI = [
   "Kars",
   "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın",
@@ -127,7 +126,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
 
-  // Dinamik Restoran Ayarları & Onaylı Yorumlar
   const [settings, setSettings] = useState<RestaurantSettings>({
     phone: "0474 212 10 15",
     address: "Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95",
@@ -141,7 +139,6 @@ export default function Home() {
   const [approvedReviews, setApprovedReviews] = useState<ApprovedReview[]>([]);
   const [averageRating, setAverageRating] = useState<number>(4.8);
 
-  // Müşterinin Tamamlanan Siparişleri ve Yorum Modal State'i
   const [deliveredOrders, setDeliveredOrders] = useState<DeliveredOrder[]>([]);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedOrderForReview, setSelectedOrderDetailsForReview] = useState<DeliveredOrder | null>(null);
@@ -152,20 +149,16 @@ export default function Home() {
 
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Kullanıcı Oturumu
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [profileName, setProfileName] = useState("Misafir");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Sepet Çekmecesi State'i
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
-  // Sipariş Modalı ve Adres State'leri
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
-  // Parça Parça Adres Bilgileri
   const [selectedCity, setSelectedCity] = useState("Kars");
   const [selectedDistrict, setSelectedDistrict] = useState("Merkez");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState("Ortakapı Mahallesi");
@@ -209,12 +202,11 @@ export default function Home() {
 
     if (data && data.length > 0) {
       setApprovedReviews(data);
-      // SADECE ONAYLANAN YORUMLARIN ORTALAMASI
       const totalRating = data.reduce((sum, item) => sum + item.rating, 0);
       const avg = totalRating / data.length;
       setAverageRating(Number(avg.toFixed(1)));
     } else {
-      setAverageRating(4.8); // Varsayılan puan
+      setAverageRating(4.8);
     }
   };
 
@@ -237,7 +229,6 @@ export default function Home() {
         if (profile.phone) setCustomerPhone(profile.phone);
       }
 
-      // Kullanıcının "Teslim Edildi" siparişlerini kontrol et
       fetchUserDeliveredOrders(user.id);
     }
   };
@@ -444,7 +435,6 @@ export default function Home() {
     router.push(`/order-success?id=${orderData.id}`);
   };
 
-  // Yorum Gönderme Fonksiyonu
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !selectedOrderForReview) return;
@@ -464,7 +454,7 @@ export default function Home() {
         customer_name: profileName !== "Misafir" ? profileName : "Müşteri",
         rating: reviewRating,
         comment: reviewComment.trim(),
-        is_approved: false, // Onaya Düşecek
+        is_approved: false,
       },
     ]);
 
@@ -473,7 +463,7 @@ export default function Home() {
     if (error) {
       alert("Yorum gönderilirken hata oluştu: " + error.message);
     } else {
-      alert("🎉 Yorumunuz alındı. Teşekkür ederiz!");
+      alert("Yorumunuz yayınlanacak.");
       setReviewModalOpen(false);
       setReviewComment("");
       setReviewRating(5);
@@ -499,7 +489,6 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Teslim Edilen Sipariş Varsa Değerlendir Butonu */}
               {deliveredOrders.length > 0 && (
                 <button
                   onClick={() => {
@@ -638,9 +627,12 @@ export default function Home() {
             )}
           </div>
 
-          <div className="text-[10px] text-pink-100/80 pt-0.5">
-            <Link href="/admin" className="hover:underline">Yönetici Girişi</Link>
-          </div>
+          {/* SADECE GİRİŞ YAPMAMIŞ ZİYARETÇİLERE GÖSTERİLEN YÖNETİCİ GİRİŞİ LİNKİ */}
+          {!currentUser && (
+            <div className="text-[10px] text-pink-100/80 pt-0.5">
+              <Link href="/login" className="hover:underline">Yönetici Girişi</Link>
+            </div>
+          )}
         </div>
       </header>
 
@@ -655,7 +647,6 @@ export default function Home() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
 
-            {/* DİNAMİK ÜCRETSİZ TESLİMAT ROZETİ */}
             <div className="absolute top-5 left-5 bg-[#ff1773] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
               {settings.has_free_delivery_limit
                 ? `${settings.free_delivery_limit} ₺ ÜZERİ ÜCRETSİZ TESLİMAT`
@@ -670,7 +661,6 @@ export default function Home() {
                 </h1>
               </div>
 
-              {/* CANLI PUAN ORTALAMASI (SADECE ONAYLI YORUMLARDAN HESAPLANIR) */}
               <div className="flex items-center gap-1.5 bg-white/95 text-slate-900 px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg">
                 <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                 <span>{averageRating}</span>
@@ -678,7 +668,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* DİNAMİK RESTORAN KÜNYE BİLGİLERİ */}
           <div className="p-4 sm:p-5 text-xs text-slate-600 space-y-2 bg-white">
             <p className="font-semibold text-slate-500">Cafe • Burger • Kebap • Tatlı • Baklava • Kahve</p>
 
@@ -696,7 +685,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ONAYLANMIŞ MÜŞTERİ YORUMLARI BÖLÜMÜ */}
         {approvedReviews.length > 0 && !searchTerm && (
           <section className="space-y-3">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
@@ -730,7 +718,6 @@ export default function Home() {
           </section>
         )}
 
-        {/* ÇOK SATANLAR BÖLÜMÜ */}
         {!searchTerm && (
           <section className="space-y-3">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
@@ -776,7 +763,6 @@ export default function Home() {
           </section>
         )}
 
-        {/* KATEGORİ SEKMELERİ */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
@@ -805,7 +791,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ÜRÜN IZGARASI */}
           {loading ? (
             <div className="text-center py-12 text-xs text-slate-400 font-bold">Menü Yükleniyor...</div>
           ) : filteredProducts.length === 0 ? (
@@ -890,7 +875,6 @@ export default function Home() {
         </section>
       </main>
 
-      {/* ALT PEMBE SEPET YÜZEN BAR */}
       {cart.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-6xl mx-auto bg-[#ff1773] text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between z-40 border border-pink-400/30">
           <div>
@@ -906,7 +890,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* SAĞDAN AÇILAN SEPET ÇEKMECESİ */}
       {isCartDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between relative animation-slide-left">
@@ -1003,7 +986,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* PARÇA PARÇA ADRESLİ SİPARİŞ MODALI */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800 border border-slate-100 my-8">
@@ -1042,7 +1024,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ADRES SEÇİM ALANI */}
               <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
                 <p className="font-extrabold text-[#ff1773] flex items-center gap-1 text-[11px] uppercase tracking-wider">
                   <MapPin className="w-3.5 h-3.5" /> Teslimat Adresi
@@ -1162,7 +1143,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ⭐ MÜŞTERİ YORUM YAPMA MODALI */}
       {reviewModalOpen && selectedOrderForReview && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800">
@@ -1178,7 +1158,6 @@ export default function Home() {
             </h3>
 
             <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
-              {/* Ürün Seçimi (Opsiyonel) */}
               {selectedOrderForReview.order_items && selectedOrderForReview.order_items.length > 0 && (
                 <div>
                   <label className="block font-bold text-slate-600 mb-1">Değerlendirilecek Alan</label>
@@ -1197,7 +1176,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Yıldız Seçimi */}
               <div>
                 <label className="block font-bold text-slate-600 mb-1">Puanınız</label>
                 <div className="flex gap-2 text-amber-400 justify-center py-2 bg-amber-50/50 rounded-2xl border border-amber-100">
@@ -1218,7 +1196,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Yorum Metni */}
               <div>
                 <label className="block font-bold text-slate-600 mb-1">Yorumunuz</label>
                 <textarea
