@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Phone, Lock, User, ShoppingBag, ShieldCheck, PhoneCall, MapPin } from "lucide-react";
-import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +17,7 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Akıllı Yönetici Girişi Yönlendirmesi
+  // Akıllı Yönetici / Kurye Girişi Yönlendirmesi
   const handleAdminRedirect = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -31,9 +30,34 @@ export default function LoginPage() {
       if (profile && profile.role === "admin") {
         router.push("/admin");
         return;
+      } else if (profile && profile.role === "courier") {
+        router.push("/courier");
+        return;
       }
     }
     router.push("/admin/login");
+  };
+
+  // Rol Bilgisine Göre Sayfaya Yönlendirme Fonksiyonu
+  const redirectUserByRole = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single();
+
+    if (profile) {
+      if (profile.role === "courier") {
+        router.push("/courier"); // Kurye paneline yönlendir
+        return;
+      } else if (profile.role === "admin") {
+        router.push("/admin"); // Admin paneline yönlendir
+        return;
+      }
+    }
+    
+    // Varsayılan müşteri rolü
+    router.push("/");
   };
 
   // Giriş Yapma İşlemi
@@ -50,30 +74,31 @@ export default function LoginPage() {
       `${rawElevenDigits}@pasha.com`,
     ];
 
-    let success = false;
+    let loggedInUser = null;
 
     for (const email of candidateEmails) {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
 
-      if (!error) {
-        success = true;
+      if (!error && data.user) {
+        loggedInUser = data.user;
         break;
       }
     }
 
     setLoading(false);
 
-    if (success) {
-      router.push("/");
+    if (loggedInUser) {
+      // Kullanıcının rolünü kontrol etip doğru panele uçuruyoruz
+      await redirectUserByRole(loggedInUser.id);
     } else {
       alert("Giriş başarısız: Telefon numaranızı veya şifrenizi kontrol ediniz.");
     }
   };
 
-  // Kayıt Olma İşlemi (Türkçe Hata Mesajlı)
+  // Kayıt Olma İşlemi
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || !password || !confirmPassword || !fullName) {
@@ -81,7 +106,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Şifre Eşleşme Kontrolü
     if (password !== confirmPassword) {
       alert("Girdiğiniz şifreler birbiriyle eşleşmiyor! Lütfen kontrol ediniz.");
       return;
@@ -111,7 +135,6 @@ export default function LoginPage() {
     });
 
     if (error) {
-      // İngilizce hataları Türkçe mesajlara çevirme mantığı
       let turkishErrorMessage = "Kayıt oluşturulamadı.";
 
       if (
@@ -149,7 +172,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-800 font-sans flex items-center justify-center p-4 relative overflow-hidden">
-      {/* 1. ARKA PLAN YEMEK GÖRSELİ */}
+      {/* ARKA PLAN YEMEK GÖRSELİ */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-105"
         style={{
@@ -159,7 +182,7 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
-      {/* Sağ Üst Yönetici Girişi Linki */}
+      {/* Sağ Üst Yönetici / Kurye Girişi Linki */}
       <div className="absolute top-4 right-6 z-20 text-xs text-white/80 hover:text-white font-medium">
         <button
           type="button"
@@ -184,7 +207,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* 2. MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU */}
+        {/* MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU */}
         <button
           onClick={() => router.push("/")}
           className="w-full bg-[#edf4fb] hover:bg-white text-slate-900 font-extrabold text-sm py-3.5 rounded-full transition shadow-xl flex items-center justify-center gap-2 border border-white/80"
@@ -192,7 +215,7 @@ export default function LoginPage() {
           <ShoppingBag className="w-4 h-4 text-slate-700" /> Misafir Olarak Devam Et
         </button>
 
-        {/* 3. GİRİŞ YAP / KAYIT OL İKİLİ TAB KAPSÜLÜ */}
+        {/* GİRİŞ YAP / KAYIT OL İKİLİ TAB KAPSÜLÜ */}
         <div className="bg-[#edf4fb]/90 p-1 rounded-full border border-white flex shadow-xl">
           <button
             type="button"
@@ -218,7 +241,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* 4. FORM İNPUTLARI */}
+        {/* FORM İNPUTLARI */}
         <form
           onSubmit={activeTab === "login" ? handleLogin : handleRegister}
           className="space-y-3"
@@ -263,7 +286,7 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* SADECE KAYIT OL TABINDA ÇIKAN 2. ŞİFRE ALANI */}
+          {/* 2. ŞİFRE ALANI */}
           {activeTab === "register" && (
             <div className="relative">
               <Lock className="absolute left-5 top-4 w-4 h-4 text-slate-400" />
