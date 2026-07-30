@@ -301,33 +301,33 @@ export default function Home() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 -mt-4 space-y-6">
-        {/* 2. ÖNE ÇIKAN RESTORAN KARTI (YEMEK / KEBAP KAPAK GÖRSELİ GÜNCELLENDİ) */}
+        {/* 2. ÖNE ÇIKAN RESTORAN KARTI (YÜKSEKLİK VE GÖRSEL BÜYÜTÜLDÜ) */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
-          <div className="relative h-48 sm:h-56 bg-slate-950 overflow-hidden">
-            {/* Orijinal Demodaki Şiş Kebap / Dürüm / Soslar İçeren Görsel */}
+          {/* h-64 sm:h-80 md:h-96 ile görsel alanı daha heybetli hale getirildi */}
+          <div className="relative h-64 sm:h-80 md:h-96 bg-slate-950 overflow-hidden">
             <img
-              src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1400&q=80"
+              src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80"
               alt="Pasha Cafe Kebap Dürüm"
-              className="w-full h-full object-cover object-center opacity-90"
+              className="w-full h-full object-cover object-center opacity-90 transition duration-500 hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
             
             {/* ÜCRETSİZ TESLİMAT ROZETİ */}
-            <div className="absolute top-4 left-4 bg-[#b32657] text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
+            <div className="absolute top-5 left-5 bg-[#b32657] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
               ÜCRETSİZ TESLİMAT
             </div>
 
-            <div className="absolute bottom-4 left-5 right-5 text-white flex justify-between items-end">
+            <div className="absolute bottom-5 left-6 right-6 text-white flex justify-between items-end">
               <div>
-                <span className="text-[10px] text-pink-200 font-bold uppercase tracking-widest">ÖNE ÇIKAN</span>
-                <h1 className="text-2xl sm:text-3xl font-black font-serif text-white leading-none mt-0.5">
+                <span className="text-[11px] text-pink-200 font-extrabold uppercase tracking-widest">ÖNE ÇIKAN</span>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-serif text-white leading-none mt-1">
                   Pasha Cafe Restaurant
                 </h1>
               </div>
 
-              {/* Demodaki Gibi Gri/Beyaz Kutulu Puan Rozeti */}
-              <div className="flex items-center gap-1 bg-white/90 text-slate-900 px-3 py-1 rounded-xl text-xs font-black shadow-md">
-                <Star className="w-3.5 h-3.5 text-slate-900 fill-slate-900" />
+              {/* Puan Rozeti */}
+              <div className="flex items-center gap-1.5 bg-white/95 text-slate-900 px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg">
+                <Star className="w-4 h-4 text-slate-900 fill-slate-900" />
                 <span>4.8</span>
               </div>
             </div>
