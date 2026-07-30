@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Phone, Lock, User, ShoppingBag, ShieldCheck } from "lucide-react";
+import { Phone, Lock, User, ShoppingBag, ShieldCheck, PhoneCall, MapPin } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-800 font-sans flex items-center justify-center p-4 relative overflow-hidden">
-      {/* 1. DEMODAKİ ARKA PLAN YEMEK GÖRSELİ (KARARTILMIŞ VE NET) */}
+      {/* 1. ARKA PLAN YEMEK GÖRSELİ */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-105"
         style={{
@@ -95,8 +95,8 @@ export default function LoginPage() {
             "url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80')",
         }}
       />
-      {/* Hafif karartma katmanı */}
-      <div className="absolute inset-0 bg-black/45" />
+      {/* Karartma overlay */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
       {/* Sağ Üst Silik Yönetici Girişi Linki */}
       <div className="absolute top-4 right-6 z-20 text-xs text-white/80 hover:text-white font-medium">
@@ -105,13 +105,13 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      <div className="relative max-w-sm w-full space-y-4 text-center z-10">
+      <div className="relative max-w-md w-full space-y-3.5 text-center z-10 py-6">
         {/* LOGO VE BAŞLIK */}
-        <div className="space-y-1">
-          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center font-black text-xs mx-auto mb-2 tracking-widest">
+        <div className="space-y-1 mb-2">
+          <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center font-black text-xs mx-auto mb-2 tracking-widest shadow-xl">
             PASHA
           </div>
-          <h1 className="text-2xl font-black font-serif text-white tracking-tight drop-shadow-md">
+          <h1 className="text-2xl sm:text-3xl font-black font-serif text-white tracking-tight drop-shadow-md">
             Pasha Cafe Restaurant
           </h1>
           <p className="text-xs text-slate-200 font-medium drop-shadow">
@@ -119,22 +119,22 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* 2. MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU */}
+        {/* 2. MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU (BÜYÜTÜLDÜ) */}
         <button
           onClick={() => router.push("/")}
-          className="w-full bg-[#e1f0ff] hover:bg-white text-slate-800 font-bold text-xs py-3 rounded-full transition shadow-lg flex items-center justify-center gap-2 border border-white/60"
+          className="w-full bg-[#edf4fb] hover:bg-white text-slate-900 font-extrabold text-sm py-3.5 rounded-full transition shadow-xl flex items-center justify-center gap-2 border border-white/80"
         >
-          <ShoppingBag className="w-4 h-4 text-slate-600" /> Misafir Olarak Devam Et
+          <ShoppingBag className="w-4 h-4 text-slate-700" /> Misafir Olarak Devam Et
         </button>
 
-        {/* 3. GİRİŞ YAP / KAYIT OL İKİLİ TAB KAPSÜLÜ */}
-        <div className="bg-[#e1f0ff]/90 p-1 rounded-full border border-white/80 flex shadow-lg">
+        {/* 3. GİRİŞ YAP / KAYIT OL İKİLİ TAB KAPSÜLÜ (BÜYÜTÜLDÜ) */}
+        <div className="bg-[#edf4fb]/90 p-1 rounded-full border border-white flex shadow-xl">
           <button
             type="button"
             onClick={() => setActiveTab("login")}
-            className={`flex-1 py-2 rounded-full text-xs font-black transition ${
+            className={`flex-1 py-2.5 rounded-full text-xs sm:text-sm font-black transition ${
               activeTab === "login"
-                ? "bg-slate-800 text-white shadow-md"
+                ? "bg-[#334155] text-white shadow-md"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -143,9 +143,9 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setActiveTab("register")}
-            className={`flex-1 py-2 rounded-full text-xs font-black transition ${
+            className={`flex-1 py-2.5 rounded-full text-xs sm:text-sm font-black transition ${
               activeTab === "register"
-                ? "bg-slate-800 text-white shadow-md"
+                ? "bg-[#334155] text-white shadow-md"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -153,56 +153,56 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* 4. FORM İNPUTLARI (BEYAZ KAPSÜL YAPISI) */}
+        {/* 4. FORM İNPUTLARI (DOLGUN BEYAZ KAPSÜLLER) */}
         <form
           onSubmit={activeTab === "login" ? handleLogin : handleRegister}
-          className="space-y-2.5"
+          className="space-y-3"
         >
           {activeTab === "register" && (
             <div className="relative">
-              <User className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+              <User className="absolute left-5 top-4 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 required
                 placeholder="Adınız Soyadınız"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-[#e1f0ff] text-slate-900 placeholder-slate-500 rounded-full pl-11 pr-4 py-3 text-xs focus:outline-none font-semibold shadow-md border border-white/80"
+                className="w-full bg-[#edf4fb] text-slate-900 placeholder-slate-500 rounded-full pl-12 pr-5 py-3.5 text-xs sm:text-sm focus:outline-none font-bold shadow-md border border-white"
               />
             </div>
           )}
 
-          {/* Telefon Numarası Alanı */}
+          {/* TELEFON NUMARASI ALANI */}
           <div className="relative">
-            <Phone className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+            <Phone className="absolute left-5 top-4 w-4 h-4 text-slate-400" />
             <input
               type="tel"
               required
               placeholder="Telefon Numaranız"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-[#e1f0ff] text-slate-900 placeholder-slate-500 rounded-full pl-11 pr-4 py-3 text-xs focus:outline-none font-semibold shadow-md border border-white/80"
+              className="w-full bg-[#edf4fb] text-slate-900 placeholder-slate-500 rounded-full pl-12 pr-5 py-3.5 text-xs sm:text-sm focus:outline-none font-bold shadow-md border border-white"
             />
           </div>
 
-          {/* Şifre Alanı */}
+          {/* ŞİFRE ALANI */}
           <div className="relative">
-            <Lock className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+            <Lock className="absolute left-5 top-4 w-4 h-4 text-slate-400" />
             <input
               type="password"
               required
               placeholder="Şifre"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#e1f0ff] text-slate-900 placeholder-slate-500 rounded-full pl-11 pr-4 py-3 text-xs focus:outline-none font-semibold shadow-md border border-white/80"
+              className="w-full bg-[#edf4fb] text-slate-900 placeholder-slate-500 rounded-full pl-12 pr-5 py-3.5 text-xs sm:text-sm focus:outline-none font-bold shadow-md border border-white"
             />
           </div>
 
-          {/* PEMBE CANLI GİRİŞ YAP BUTONU */}
+          {/* DOLGUN CANLI PEMBE GİRİŞ YAP BUTONU */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black text-xs py-3.5 rounded-full transition shadow-xl mt-1 tracking-wide uppercase"
+            className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black text-sm py-4 rounded-full transition shadow-2xl mt-1 tracking-wide uppercase"
           >
             {loading
               ? "İşlem yapılıyor..."
@@ -211,6 +211,45 @@ export default function LoginPage() {
               : "Kayıt Ol"}
           </button>
         </form>
+
+        {/* 5. ŞİFREMİ UNUTTUM LİNKİ */}
+        {activeTab === "login" && (
+          <div className="pt-0.5 pb-1">
+            <button
+              type="button"
+              onClick={() => alert("Lütfen restoran yönetimi ile iletişime geçin.")}
+              className="text-xs text-white/90 hover:text-white underline font-bold drop-shadow"
+            >
+              Şifremi unuttum
+            </button>
+          </div>
+        )}
+
+        {/* 6. DEMODAKİ BİREBİR ALT ADRES VE İLETİŞİM BİLGİ KARTI */}
+        <div className="bg-[#edf4fb] border border-white rounded-3xl p-4.5 text-left space-y-2 shadow-2xl mt-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center shrink-0">
+              <PhoneCall className="w-4 h-4 text-[#ff1773]" />
+            </div>
+            <div>
+              <p className="font-extrabold text-slate-900 text-xs sm:text-sm leading-tight">
+                Pasha Cafe Restaurant
+              </p>
+              <p className="text-[#ff1773] font-black text-xs sm:text-sm">
+                0474 212 10 15
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 pt-1 border-t border-slate-200/60">
+            <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center shrink-0 mt-0.5">
+              <MapPin className="w-4 h-4 text-[#ff1773]" />
+            </div>
+            <p className="text-[11px] sm:text-xs text-slate-600 font-medium leading-relaxed">
+              Ortakapı Mahallesi Gazi Ahmet Muhtar Paşa Caddesi No: 95 Merkez / Kars
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
