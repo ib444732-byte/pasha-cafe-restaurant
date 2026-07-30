@@ -51,7 +51,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false); // Arama Öneri Paneli
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
 
@@ -74,7 +74,6 @@ export default function Home() {
     fetchData();
     checkUserSession();
 
-    // Dışarı tıklanınca arama öneri kutusunu kapatma
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsSearchOpen(false);
@@ -162,7 +161,6 @@ export default function Home() {
     });
   };
 
-  // KUSURSUZ VE GÜVENLİ ARAMA FİLTRESİ
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "all" || product.category_id === selectedCategory;
@@ -182,13 +180,12 @@ export default function Home() {
     return matchesCategory && (titleMatches || descMatches);
   });
 
-  // CANLI ARAMA ÖNERİLERİ (AÇILIR KUTU İÇİN)
   const searchSuggestions = searchTerm.trim()
     ? products.filter((p) =>
         (p.title || "")
           .toLocaleLowerCase('tr-TR')
           .includes(searchTerm.trim().toLocaleLowerCase('tr-TR'))
-      ).slice(0, 5) // Maksimum 5 öneri göster
+      ).slice(0, 5)
     : [];
 
   const cartTotal = cart.reduce(
@@ -315,7 +312,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CANLI VE AÇILIR ÖNERİLİ ARAMA ÇUBUĞU */}
+          {/* CANLI VE DAHA BÜYÜK ÖNERİLİ ARAMA ÇUBUĞU */}
           <div className="relative pt-1 z-30" ref={searchRef}>
             <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
             <input
@@ -341,11 +338,11 @@ export default function Home() {
               </button>
             )}
 
-            {/* 🎯 OTOMATİK TAHMİN / ÖNERİ PANELİ (DROPDOWN) */}
+            {/* 🎯 BÜYÜTÜLMÜŞ ÖNERİ PANELİ (DROPDOWN) */}
             {isSearchOpen && searchTerm.trim().length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-slate-800">
-                <div className="p-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Utensils className="w-3 h-3 text-[#ff1773]" /> Arama Önerileri
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-slate-800">
+                <div className="p-3 border-b border-slate-100 text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 bg-slate-50/50">
+                  <Utensils className="w-3.5 h-3.5 text-[#ff1773]" /> Arama Önerileri
                 </div>
 
                 {searchSuggestions.length > 0 ? (
@@ -357,29 +354,29 @@ export default function Home() {
                           setSearchTerm(product.title);
                           setIsSearchOpen(false);
                         }}
-                        className="p-2.5 hover:bg-slate-50 transition flex items-center justify-between cursor-pointer group"
+                        className="p-3.5 hover:bg-pink-50/40 transition flex items-center justify-between cursor-pointer group"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3.5">
                           <img
                             src={
                               product.image_url ||
                               "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"
                             }
                             alt={product.title}
-                            className="w-10 h-10 rounded-xl object-cover"
+                            className="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition duration-200"
                           />
                           <div>
-                            <p className="text-xs font-bold text-slate-900 group-hover:text-[#ff1773] transition">
+                            <p className="text-sm font-extrabold text-slate-900 group-hover:text-[#ff1773] transition">
                               {product.title}
                             </p>
-                            <p className="text-[10px] text-slate-400 line-clamp-1">
+                            <p className="text-xs text-slate-400 line-clamp-1 font-medium mt-0.5">
                               {product.description || "Lezzetli seçim"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-[#ff1773]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-black text-[#ff1773]">
                             {product.price.toFixed(2)} ₺
                           </span>
                           <button
@@ -387,16 +384,16 @@ export default function Home() {
                               e.stopPropagation();
                               addToCart(product);
                             }}
-                            className="w-7 h-7 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] shadow-sm transition"
+                            className="w-8 h-8 rounded-full bg-[#ff1773] text-white flex items-center justify-center hover:bg-[#d90d5c] shadow-md transition"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                  <div className="p-5 text-center text-xs text-slate-400 font-bold">
                     "{searchTerm}" ile eşleşen bir yemek bulunamadı.
                   </div>
                 )}
