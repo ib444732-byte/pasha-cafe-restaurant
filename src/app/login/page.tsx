@@ -14,6 +14,7 @@ export default function LoginPage() {
   // Form State'leri
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); // Şifre Tekrarı State'i
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,11 +73,22 @@ export default function LoginPage() {
     }
   };
 
-  // Kayıt Olma İşlemi
+  // Kayıt Olma İşlemi (Çift Şifre Kontrollü)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || !password || !fullName) {
+    if (!phone || !password || !confirmPassword || !fullName) {
       alert("Lütfen tüm alanları doldurunuz.");
+      return;
+    }
+
+    // Şifre Eşleşme Kontrolü
+    if (password !== confirmPassword) {
+      alert("Girdiğiniz şifreler birbiriyle eşleşmiyor! Lütfen kontrol ediniz.");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("Şifreniz en az 6 karakterden oluşmalıdır.");
       return;
     }
 
@@ -237,7 +249,22 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* GİRİŞ BUTONU */}
+          {/* SADECE KAYIT OL TABINDA ÇIKAN 2. ŞİFRE (ŞİFRE TEKRARI) ALANI */}
+          {activeTab === "register" && (
+            <div className="relative">
+              <Lock className="absolute left-5 top-4 w-4 h-4 text-slate-400" />
+              <input
+                type="password"
+                required
+                placeholder="Şifrenizi Tekrar Giriniz"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-[#edf4fb] text-slate-900 placeholder-slate-500 rounded-full pl-12 pr-5 py-3.5 text-xs sm:text-sm focus:outline-none font-bold shadow-md border border-white"
+              />
+            </div>
+          )}
+
+          {/* GİRİŞ / KAYIT BUTONU */}
           <button
             type="submit"
             disabled={loading}
