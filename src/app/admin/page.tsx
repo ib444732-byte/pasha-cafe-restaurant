@@ -350,12 +350,29 @@ export default function AdminPage() {
   };
 
   const handleDeleteCategory = async (id: string, name: string) => {
+    const { data: categoryProducts, error: checkError } = await supabase
+      .from("products")
+      .select("id")
+      .eq("category_id", id)
+      .eq("is_available", true);
+
+    if (checkError) {
+      alert("Kategori kontrol edilirken hata oluştu: " + checkError.message);
+      return;
+    }
+
+    if (categoryProducts && categoryProducts.length > 0) {
+      alert(`"${name}" kategorisi silinemez! Bu kategoriye ait aktif ${categoryProducts.length} adet ürün bulunmaktadır. Önce o ürünleri kaldırın.`);
+      return;
+    }
+
     if (!confirm(`"${name}" kategorisini silmek istediğinize emin misiniz?`)) return;
 
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) {
       alert("Kategori silinirken hata: " + error.message);
     } else {
+      alert(`"${name}" kategorisi başarıyla silindi.`);
       fetchCategories();
     }
   };
@@ -415,7 +432,6 @@ export default function AdminPage() {
     }
   };
 
-  // Ürünü tamamen silmek yerine pasife çekiyoruz (Soft Delete) - Geçmiş sipariş ilişkileri bozulmaz
   const handleDeleteProduct = async (id: string, title: string) => {
     if (!confirm(`"${title}" ürününü menüden kaldırmak istediğinize emin misiniz?`)) return;
 
@@ -1225,51 +1241,51 @@ export default function AdminPage() {
                       >
                         {rev.is_approved ? "ONAYLANDI (Yayında)" : "ONAY BEKLİYOR"}
                       </span>
-                    </div>
-
-                    {/* Yıldız Puanı */}
-                    <div className="flex items-center gap-1 text-amber-400">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          className={`w-3.5 h-3.5 ${
-                            s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"
-                          }`}
-                        />
-                      ))}
-                      <span className="text-slate-400 font-bold ml-1">{rev.rating}/5</span>
-                      {rev.products?.title && (
-                        <span className="text-pink-400 font-bold ml-2">
-                          • Ürün: {rev.products.title}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Yorum Metni */}
-                    <p className="text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800 italic leading-relaxed">
-                      "{rev.comment}"
-                    </p>
-
-                    {/* Aksiyon Butonları */}
-                    <div className="flex justify-end items-center gap-2 pt-1">
-                      {!rev.is_approved && (
-                        <button
-                          onClick={() => handleApproveReview(rev.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm"
-                        >
-                          <Check className="w-3.5 h-3.5" /> Onayla & Yayınla
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => handleDeleteReview(rev.id)}
-                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs px-3 py-1.5 rounded-xl border border-red-500/20 transition flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Sil
-                      </button>
-                    </div>
                   </div>
-                ))
+
+                  {/* Yıldız Puanı */}
+                  <div className="flex items-center gap-1 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={`w-3.5 h-3.5 ${
+                          s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"
+                        }`}
+                      />
+                    ))}
+                    <span className="text-slate-400 font-bold ml-1">{rev.rating}/5</span>
+                    {rev.products?.title && (
+                      <span className="text-pink-400 font-bold ml-2">
+                        • Ürün: {rev.products.title}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Yorum Metni */}
+                  <p className="text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800 italic leading-relaxed">
+                    "{rev.comment}"
+                  </p>
+
+                  {/* Aksiyon Butonları */}
+                  <div className="flex justify-end items-center gap-2 pt-1">
+                    {!rev.is_approved && (
+                      <button
+                        onClick={() => handleApproveReview(rev.id)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Onayla & Yayınla
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleDeleteReview(rev.id)}
+                      className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs px-3 py-1.5 rounded-xl border border-red-500/20 transition flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Sil
+                    </button>
+                  </div>
+                </div>
+              ))
               )}
             </div>
           </div>
