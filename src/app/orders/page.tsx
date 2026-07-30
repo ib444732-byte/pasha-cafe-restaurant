@@ -60,7 +60,8 @@ export default function PastOrdersPage() {
 
   const handleOpenReviewModal = (order: Order) => {
     setSelectedOrder(order);
-    setSelectedProductId(null);
+    // Varsayılan olarak siparişteki ilk ürünün ID'sini seçiyoruz ki boş gitme riski olmasın
+    setSelectedProductId(order.order_items?.[0]?.product_id || null);
     setRating(5);
     setComment("");
     setReviewModalOpen(true);
@@ -82,11 +83,11 @@ export default function PastOrdersPage() {
       {
         user_id: user.id,
         order_id: selectedOrder.id,
-        product_id: selectedProductId,
+        product_id: selectedProductId ? String(selectedProductId) : null, // Ürün ID'sinin tam gitmesi sağlandı
         customer_name: user.user_metadata?.full_name || "Müşteri",
         rating: rating,
         comment: comment.trim(),
-        is_approved: false, // Yönetici onayına düşer
+        is_approved: false,
       },
     ]);
 
@@ -169,7 +170,6 @@ export default function PastOrdersPage() {
                       <p className="text-sm font-black text-[#ff1773]">{Number(order.total_amount).toFixed(2)} ₺</p>
                     </div>
 
-                    {/* Sadece teslim edilen siparişler için değerlendir butonu */}
                     {isDelivered && (
                       <button
                         onClick={() => handleOpenReviewModal(order)}
@@ -186,7 +186,6 @@ export default function PastOrdersPage() {
         )}
       </div>
 
-      {/* YORUM YAPMA MODALI */}
       {reviewModalOpen && selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800">
@@ -204,16 +203,15 @@ export default function PastOrdersPage() {
             <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
               {selectedOrder.order_items && selectedOrder.order_items.length > 0 && (
                 <div>
-                  <label className="block font-bold text-slate-600 mb-1">Değerlendirilecek Alan</label>
+                  <label className="block font-bold text-slate-600 mb-1">Değerlendirilecek Ürün</label>
                   <select
                     value={selectedProductId || ""}
                     onChange={(e) => setSelectedProductId(e.target.value || null)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-[#ff1773]"
                   >
-                    <option value="">Genel Restoran Değerlendirmesi</option>
                     {selectedOrder.order_items.map((item) => (
                       <option key={item.product_id} value={item.product_id}>
-                        Ürün: {item.product_title}
+                        {item.product_title}
                       </option>
                     ))}
                   </select>

@@ -36,7 +36,6 @@ export default function ProductDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [addedAnimation, setAddedAnimation] = useState(false);
 
-  // Ürüne ait onaylanmış yorumlar ve ortalama puan
   const [productReviews, setProductReviews] = useState<ProductReview[]>([]);
   const [productAvgRating, setProductAvgRating] = useState<number>(4.9);
 
@@ -66,10 +65,11 @@ export default function ProductDetailPage() {
   };
 
   const fetchProductReviews = async () => {
+    // Sadece bu ürünün ID'sine ait VE onaylanmış yorumları çekiyoruz
     const { data } = await supabase
       .from("reviews")
       .select("id, customer_name, rating, comment, created_at")
-      .eq("product_id", productId)
+      .eq("product_id", String(productId))
       .eq("is_approved", true)
       .order("created_at", { ascending: false });
 
@@ -108,7 +108,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans pb-28">
-      {/* GÖRSEL VE ÜST NAVİGASYON */}
       <div className="relative h-72 sm:h-96 w-full bg-slate-900">
         <img
           src={
@@ -141,7 +140,6 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* İÇERİK KARTI */}
       <div className="max-w-2xl mx-auto px-4 -mt-8 relative z-20 space-y-4">
         <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-4">
           <div className="flex justify-between items-start gap-4">
@@ -174,7 +172,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* ADET SEÇİM KARTI */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
           <span className="text-xs font-bold text-slate-700">Porsiyon / Adet</span>
           <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
@@ -194,7 +191,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* 🌟 BU ÜRÜNE AİT ONAYLANMIŞ YORUMLAR BÖLÜMÜ */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-4">
           <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-[#ff1773]" /> Bu Ürün İçin Yapılan Yorumlar ({productReviews.length})
@@ -226,7 +222,6 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* ALT SABİT SEPETE EKLE BAR */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 z-40 shadow-2xl">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <div>
