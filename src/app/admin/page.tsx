@@ -31,7 +31,7 @@ import {
   XCircle,
   CheckCheck,
   Settings,
-  BuildingStorefront,
+  Building,
   Save,
 } from "lucide-react";
 import Link from "next/link";
@@ -551,7 +551,7 @@ export default function AdminPage() {
               <Users className="w-4 h-4" /> Kullanıcılar & Kuryeler
             </button>
 
-            {/* YENİ: RESTORAN AYARLARI SEKMESİ */}
+            {/* RESTORAN AYARLARI SEKMESİ */}
             <button
               onClick={() => setActiveTab("settings")}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
@@ -1115,7 +1115,7 @@ export default function AdminPage() {
           <div className="space-y-4 max-w-2xl mx-auto">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
               <h2 className="text-base font-bold text-pink-500 flex items-center gap-2 border-b border-slate-800 pb-3">
-                <BuildingStorefront className="w-5 h-5 text-pink-500" /> Restoran & Teslimat Bilgilerini Düzenle
+                <Building className="w-5 h-5 text-pink-500" /> Restoran & Teslimat Bilgilerini Düzenle
               </h2>
 
               <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
