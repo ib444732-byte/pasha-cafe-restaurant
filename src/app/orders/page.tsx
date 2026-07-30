@@ -1,23 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import {
-  Clock,
-  Utensils,
-  Bike,
-  CheckCircle2,
-  XCircle,
-  ShoppingBag,
-  ArrowLeft,
-  Package,
-  AlertCircle
-} from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { ArrowLeft, Package, Star, Calendar, Clock, MapPin, Send, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 interface OrderItem {
   id: string;
+  product_id: string;
   product_title: string;
   quantity: number;
   unit_price: number;
@@ -25,251 +16,254 @@ interface OrderItem {
 
 interface Order {
   id: string;
-  customer_name: string;
-  customer_phone: string;
-  delivery_address: string;
+  created_at: string;
+  status: string;
   total_amount: number;
   payment_method: string;
-  status: string;
-  created_at: string;
-  order_items?: OrderItem[];
+  delivery_address: string;
+  order_items: OrderItem[];
 }
 
-export default function MyOrdersPage() {
+export default function PastOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Yorum Yapma Modali
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
-    fetchMyOrders();
-
-    const channel = supabase
-      .channel("realtime-customer-orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        () => {
-          fetchMyOrders();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    fetchUserOrders();
   }, []);
 
-  const fetchMyOrders = async () => {
-    try {
-      setLoading(true);
-
-      // 1. Yerel hafızadaki sipariş ID ve Telefon bilgilerini okuyalım
-      const lastOrderId = typeof window !== "undefined" ? localStorage.getItem("last_order_id") : null;
-      const lastOrderPhone = typeof window !== "undefined" ? localStorage.getItem("last_order_phone") : null;
-
-      // 2. Kullanıcı oturumunu alalım
-      const { data: { user } } = await supabase.auth.getUser();
-
-      let query = supabase
-        .from("orders")
-        .select("*, order_items(*)")
-        .order("created_at", { ascending: false });
-
-      const conditions: string[] = [];
-
-      // Oturum varsa
-      if (user) {
-        conditions.push(`user_id.eq.${user.id}`);
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("phone")
-          .eq("id", user.id)
-          .single();
-
-        if (profile?.phone) {
-          conditions.push(`customer_phone.eq.${profile.phone}`);
-        }
-      }
-
-      // Yerel hafızadaki sipariş ID'si varsa
-      if (lastOrderId) {
-        conditions.push(`id.eq.${lastOrderId}`);
-      }
-
-      // Yerel hafızadaki telefon numarası varsa
-      if (lastOrderPhone) {
-        conditions.push(`customer_phone.eq.${lastOrderPhone}`);
-      }
-
-      // Şartlardan herhangi biri uyarsa getir
-      if (conditions.length > 0) {
-        query = query.or(conditions.join(","));
-        const { data } = await query;
-
-        if (data && data.length > 0) {
-          setOrders(data as Order[]);
-          setLoading(false);
-          return;
-        }
-      }
-
-      setOrders([]);
-    } catch (err) {
-      console.error("Siparişler getirilirken hata:", err);
-    } finally {
-      setLoading(false);
+  const fetchUserOrders = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.replace("/login");
+      return;
     }
+
+    const { data } = await supabase
+      .from("orders")
+      .select("*, order_items(*)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (data) setOrders(data as Order[]);
+    setLoading(false);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "bekliyor":
-        return (
-          <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" /> Sipariş Alındı (Bekliyor)
-          </span>
-        );
-      case "hazirlaniyor":
-        return (
-          <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-            <Utensils className="w-3.5 h-3.5" /> Mutfakta Hazırlanıyor
-          </span>
-        );
-      case "hazir":
-        return (
-          <span className="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-            <Package className="w-3.5 h-3.5" /> Sipariş Hazır (Kurye Bekleniyor)
-          </span>
-        );
-      case "yolda":
-        return (
-          <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 animate-pulse">
-            <Bike className="w-3.5 h-3.5" /> Kurye Yolda!
-          </span>
-        );
-      case "teslim_edildi":
-        return (
-          <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Teslim Edildi
-          </span>
-        );
-      case "iptal":
-      case "iptal_edildi":
-        return (
-          <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-            <XCircle className="w-3.5 h-3.5" /> İPTAL EDİLDİ
-          </span>
-        );
-      default:
-        return (
-          <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-full text-xs font-bold">
-            {status}
-          </span>
-        );
+  const handleOpenReviewModal = (order: Order) => {
+    setSelectedOrder(order);
+    setSelectedProductId(null);
+    setRating(5);
+    setComment("");
+    setReviewModalOpen(true);
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !selectedOrder) return;
+
+    if (!comment.trim()) {
+      alert("Lütfen bir yorum yazın.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    const { error } = await supabase.from("reviews").insert([
+      {
+        user_id: user.id,
+        order_id: selectedOrder.id,
+        product_id: selectedProductId,
+        customer_name: user.user_metadata?.full_name || "Müşteri",
+        rating: rating,
+        comment: comment.trim(),
+        is_approved: false, // Yönetici onayına düşer
+      },
+    ]);
+
+    setSubmitting(false);
+
+    if (error) {
+      alert("Hata oluştu: " + error.message);
+    } else {
+      alert("Yorumunuz yayınlanacak.");
+      setReviewModalOpen(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8">
+    <div className="min-h-screen bg-[#f4f5f8] text-slate-800 font-sans p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        
-        {/* ÜST BAŞLIK */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition"
+            className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition shadow-sm"
           >
-            <ArrowLeft className="w-4 h-4 text-pink-500" /> Ana Sayfaya Dön
+            <ArrowLeft className="w-4 h-4" />
           </Link>
-
-          <h1 className="text-lg font-black text-pink-500 uppercase tracking-wide flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5" /> SİPARİŞLERİM
-          </h1>
+          <h1 className="text-xl font-black text-slate-900">Geçmiş Siparişlerim</h1>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-xs text-slate-500">Siparişleriniz yükleniyor...</div>
+          <div className="text-center py-12 text-xs text-slate-400 font-bold">Siparişler yükleniyor...</div>
         ) : orders.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 text-center space-y-3">
-            <p className="text-sm font-bold text-slate-400">Henüz aktif bir siparişiniz bulunmuyor.</p>
+          <div className="bg-white rounded-3xl p-10 text-center space-y-3 border border-slate-200 shadow-sm">
+            <Package className="w-12 h-12 text-slate-300 mx-auto" />
+            <p className="font-bold text-sm text-slate-600">Henüz geçmiş siparişiniz bulunmuyor.</p>
             <Link
               href="/"
-              className="inline-block bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition"
+              className="inline-block bg-[#ff1773] text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md hover:bg-[#d90d5c] transition"
             >
-              Menüyü İncele & Sipariş Ver
+              Menüye Git
             </Link>
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className={`bg-slate-900 border rounded-3xl p-5 space-y-4 shadow-xl transition ${
-                  order.status === "iptal" || order.status === "iptal_edildi"
-                    ? "border-red-500/30"
-                    : "border-slate-800"
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">
-                      Sipariş No: #{order.id ? order.id.substring(0, 8) : "-"}
-                    </p>
-                    <p className="text-xs font-bold text-white mt-0.5">
-                      {new Date(order.created_at).toLocaleDateString("tr-TR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+            {orders.map((order) => {
+              const isDelivered = order.status === "teslim_edildi";
+              const dateObj = new Date(order.created_at);
+              const dateStr = dateObj.toLocaleDateString("tr-TR");
+              const timeStr = dateObj.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+
+              return (
+                <div key={order.id} className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                    <div>
+                      <p className="text-xs font-black text-slate-900">Sipariş ID: #{order.id.substring(0, 8)}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#ff1773]" /> {dateStr} • <Clock className="w-3 h-3 text-[#ff1773]" /> {timeStr}
+                      </p>
+                    </div>
+
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border ${
+                      isDelivered 
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                        : "bg-amber-50 text-amber-600 border-amber-200"
+                    }`}>
+                      {order.status === "teslim_edildi" ? "Teslim Edildi" : order.status}
+                    </span>
                   </div>
 
-                  <div>{getStatusBadge(order.status)}</div>
-                </div>
-
-                {/* İPTAL EDİLDİ UYARISI BANNERI */}
-                {(order.status === "iptal" || order.status === "iptal_edildi") && (
-                  <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-2xl flex items-center gap-2 text-xs text-red-300">
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span>Bu sipariş restoran yönetimi tarafından iptal edilmiştir.</span>
-                  </div>
-                )}
-
-                {/* Ürün Listesi */}
-                <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800/80 space-y-1.5 text-xs">
-                  {order.order_items && order.order_items.length > 0 ? (
-                    order.order_items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center text-slate-300">
-                        <span>
-                          <strong className="text-pink-500">{item.quantity}x</strong> {item.product_title}
-                        </span>
-                        <span className="font-bold">₺{(item.unit_price * item.quantity).toFixed(2)}</span>
+                  <div className="space-y-1.5 text-xs">
+                    <p className="font-bold text-slate-700">Ürünler:</p>
+                    {order.order_items?.map((item) => (
+                      <div key={item.id} className="flex justify-between text-slate-600 bg-slate-50 p-2 rounded-xl">
+                        <span><strong className="text-[#ff1773]">{item.quantity}x</strong> {item.product_title}</span>
+                        <span className="font-bold">{(item.unit_price * item.quantity).toFixed(2)} ₺</span>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-500 text-[11px]">Sipariş detayları getiriliyor...</p>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">{order.payment_method}</p>
-                    <p className="text-base font-black text-pink-500">₺{Number(order.total_amount).toFixed(2)}</p>
+                    ))}
                   </div>
 
-                  <p className="text-xs text-slate-400 max-w-[200px] text-right truncate">
-                    📍 {order.delivery_address}
-                  </p>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <div>
+                      <p className="text-[10px] text-slate-400">Toplam Tutar</p>
+                      <p className="text-sm font-black text-[#ff1773]">{Number(order.total_amount).toFixed(2)} ₺</p>
+                    </div>
+
+                    {/* Sadece teslim edilen siparişler için değerlendir butonu */}
+                    {isDelivered && (
+                      <button
+                        onClick={() => handleOpenReviewModal(order)}
+                        className="bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-slate-950" /> Siparişi Değerlendir
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-
       </div>
+
+      {/* YORUM YAPMA MODALI */}
+      {reviewModalOpen && selectedOrder && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800">
+            <button
+              onClick={() => setReviewModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-base font-black text-[#ff1773] flex items-center gap-2">
+              <Star className="w-5 h-5 fill-[#ff1773]" /> Siparişi Değerlendir
+            </h3>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
+              {selectedOrder.order_items && selectedOrder.order_items.length > 0 && (
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1">Değerlendirilecek Alan</label>
+                  <select
+                    value={selectedProductId || ""}
+                    onChange={(e) => setSelectedProductId(e.target.value || null)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-[#ff1773]"
+                  >
+                    <option value="">Genel Restoran Değerlendirmesi</option>
+                    {selectedOrder.order_items.map((item) => (
+                      <option key={item.product_id} value={item.product_id}>
+                        Ürün: {item.product_title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-slate-600 mb-1">Puanınız</label>
+                <div className="flex gap-2 text-amber-400 justify-center py-2 bg-amber-50/50 rounded-2xl border border-amber-100">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="p-1 hover:scale-110 transition"
+                    >
+                      <Star
+                        className={`w-7 h-7 ${
+                          star <= rating ? "fill-amber-400 text-amber-400" : "text-slate-300"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-600 mb-1">Yorumunuz</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Yemekler ve servis nasıldı?"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:border-[#ff1773] resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-[#ff1773] hover:bg-[#d90d5c] text-white font-black py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+              >
+                <Send className="w-4 h-4" />
+                {submitting ? "Gönderiliyor..." : "Değerlendirmeyi Gönder"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
