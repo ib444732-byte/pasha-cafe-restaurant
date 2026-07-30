@@ -17,26 +17,47 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Giriş Yapma İşlemi (Telefon Numarası ile)
+  // Telefon Numarasını Standart Formata Çevirme (Başındaki 0 ve boşlukları temizler)
+  const formatPhoneNumber = (rawPhone: string) => {
+    let cleaned = rawPhone.replace(/\D/g, ""); // Sadece rakamları al
+    if (cleaned.startsWith("0")) {
+      cleaned = cleaned.substring(1); // Baştaki 0'ı sil
+    }
+    return cleaned;
+  };
+
+  // Giriş Yapma İşlemi
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const cleanPhone = phone.replace(/\s+/g, "");
+    const cleanPhone = formatPhoneNumber(phone);
+    
+    // Hem 0'lı hem 0'sız versiyonları deneyebilmek için email formatı
     const formattedEmail = `${cleanPhone}@pasha.com`;
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: formattedEmail,
       password: password,
     });
 
-    setLoading(false);
-
     if (error) {
-      alert("Giriş yapılamadı: Lütfen telefon numaranızı ve şifrenizi kontrol edin.");
-    } else {
-      router.push("/");
+      // Alternatif olarak başında 0 olan e-posta formatını da deneyelim
+      const altEmail = `0${cleanPhone}@pasha.com`;
+      const { error: altError } = await supabase.auth.signInWithPassword({
+        email: altEmail,
+        password: password,
+      });
+
+      if (altError) {
+        setLoading(false);
+        alert("Giriş yapılamadı: Telefon numaranızı veya şifrenizi kontrol edin.");
+        return;
+      }
     }
+
+    setLoading(false);
+    router.push("/");
   };
 
   // Kayıt Olma İşlemi
@@ -48,8 +69,8 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const cleanPhone = phone.replace(/\s+/g, "");
-    const formattedEmail = `${cleanPhone}@pasha.com`;
+    const cleanPhone = formatPhoneNumber(phone);
+    const formattedEmail = `0${cleanPhone}@pasha.com`; // Veritabanında başında 0 olan numara tutuluyor
 
     const { data, error } = await supabase.auth.signUp({
       email: formattedEmail,
@@ -57,7 +78,7 @@ export default function LoginPage() {
       options: {
         data: {
           full_name: fullName,
-          phone: cleanPhone,
+          phone: `0${cleanPhone}`,
         },
       },
     });
@@ -73,7 +94,7 @@ export default function LoginPage() {
         {
           id: data.user.id,
           full_name: fullName,
-          phone: cleanPhone,
+          phone: `0${cleanPhone}`,
           role: "customer",
         },
       ]);
@@ -95,10 +116,9 @@ export default function LoginPage() {
             "url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80')",
         }}
       />
-      {/* Karartma overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
 
-      {/* Sağ Üst Silik Yönetici Girişi Linki */}
+      {/* Sağ Üst Yönetici Girişi Linki */}
       <div className="absolute top-4 right-6 z-20 text-xs text-white/80 hover:text-white font-medium">
         <Link href="/admin" className="flex items-center gap-1 hover:underline">
           <ShieldCheck className="w-3.5 h-3.5" /> Yönetici Girişi
@@ -119,7 +139,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* 2. MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU (BÜYÜTÜLDÜ) */}
+        {/* 2. MİSAFİR OLARAK DEVAM ET KAPSÜL BUTONU */}
         <button
           onClick={() => router.push("/")}
           className="w-full bg-[#edf4fb] hover:bg-white text-slate-900 font-extrabold text-sm py-3.5 rounded-full transition shadow-xl flex items-center justify-center gap-2 border border-white/80"
@@ -127,7 +147,7 @@ export default function LoginPage() {
           <ShoppingBag className="w-4 h-4 text-slate-700" /> Misafir Olarak Devam Et
         </button>
 
-        {/* 3. GİRİŞ YAP / KAYIT OL İKİLİ TAB KAPSÜLÜ (BÜYÜTÜLDÜ) */}
+        {/* 3. GİRİŞ YAP / KAYIT OL İKİLİ TAB KAPSÜLÜ */}
         <div className="bg-[#edf4fb]/90 p-1 rounded-full border border-white flex shadow-xl">
           <button
             type="button"
@@ -153,7 +173,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* 4. FORM İNPUTLARI (DOLGUN BEYAZ KAPSÜLLER) */}
+        {/* 4. FORM İNPUTLARI */}
         <form
           onSubmit={activeTab === "login" ? handleLogin : handleRegister}
           className="space-y-3"
@@ -178,7 +198,7 @@ export default function LoginPage() {
             <input
               type="tel"
               required
-              placeholder="Telefon Numaranız"
+              placeholder="Telefon Numaranız (Örn: 0532...)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full bg-[#edf4fb] text-slate-900 placeholder-slate-500 rounded-full pl-12 pr-5 py-3.5 text-xs sm:text-sm focus:outline-none font-bold shadow-md border border-white"
@@ -198,7 +218,7 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* DOLGUN CANLI PEMBE GİRİŞ YAP BUTONU */}
+          {/* GİRİŞ BUTONU */}
           <button
             type="submit"
             disabled={loading}
@@ -212,7 +232,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* 5. ŞİFREMİ UNUTTUM LİNKİ */}
         {activeTab === "login" && (
           <div className="pt-0.5 pb-1">
             <button
@@ -225,7 +244,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* 6. DEMODAKİ BİREBİR ALT ADRES VE İLETİŞİM BİLGİ KARTI */}
+        {/* ALT BİLGİ KARTICIKLARI */}
         <div className="bg-[#edf4fb] border border-white rounded-3xl p-4.5 text-left space-y-2 shadow-2xl mt-2">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center shrink-0">
