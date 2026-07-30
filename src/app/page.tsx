@@ -415,7 +415,8 @@ export default function Home() {
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-900/40 border border-white/20 flex items-center justify-center font-black text-[11px] text-pink-100 uppercase tracking-widest">
+              {/* ŞIK, GİRİŞ EKRANI İLE UYUMLU GRİ/ANTRASİT DAİRESEL LOGO */}
+              <div className="w-11 h-11 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center font-black text-[10px] uppercase tracking-widest shadow-lg">
                 PASHA
               </div>
               <div>
