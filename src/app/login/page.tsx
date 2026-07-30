@@ -14,7 +14,7 @@ export default function LoginPage() {
   // Form State'leri
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // Şifre Tekrarı State'i
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -73,7 +73,7 @@ export default function LoginPage() {
     }
   };
 
-  // Kayıt Olma İşlemi (Çift Şifre Kontrollü)
+  // Kayıt Olma İşlemi (Türkçe Hata Mesajlı)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || !password || !confirmPassword || !fullName) {
@@ -111,7 +111,21 @@ export default function LoginPage() {
     });
 
     if (error) {
-      alert("Kayıt oluşturulamadı: " + error.message);
+      // İngilizce hataları Türkçe mesajlara çevirme mantığı
+      let turkishErrorMessage = "Kayıt oluşturulamadı.";
+
+      if (
+        error.message.includes("User already registered") ||
+        error.message.includes("already exists")
+      ) {
+        turkishErrorMessage = "Bu telefon numarası ile zaten kayıtlı bir kullanıcı mevcut! Giriş yap sekmesinden giriş yapabilirsiniz.";
+      } else if (error.message.includes("Password should be at least")) {
+        turkishErrorMessage = "Şifreniz çok kısa, lütfen en az 6 karakter giriniz.";
+      } else {
+        turkishErrorMessage = `Kayıt başarısız: ${error.message}`;
+      }
+
+      alert(turkishErrorMessage);
       setLoading(false);
       return;
     }
@@ -249,7 +263,7 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* SADECE KAYIT OL TABINDA ÇIKAN 2. ŞİFRE (ŞİFRE TEKRARI) ALANI */}
+          {/* SADECE KAYIT OL TABINDA ÇIKAN 2. ŞİFRE ALANI */}
           {activeTab === "register" && (
             <div className="relative">
               <Lock className="absolute left-5 top-4 w-4 h-4 text-slate-400" />
