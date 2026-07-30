@@ -45,6 +45,50 @@ interface CartItem {
   quantity: number;
 }
 
+// Türkiye İl & Kars İlçe/Mahalle Veri Yapısı
+const IL_LISTESI = [
+  "Kars",
+  "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin", "Aydın",
+  "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa",
+  "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir",
+  "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir",
+  "Kahramanmaraş", "Karabük", "Karaman", "Kastamonu", "Kayseri", "Kırıkkale", "Kırklareli", "Kırşehir", "Kilis", "Kocaeli", "Konya", "Kütahya",
+  "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize",
+  "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Şanlıurfa", "Şırnak", "Tekirdağ", "Tokat", "Trabzon", "Tunceli",
+  "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"
+];
+
+const KARS_ILCELERI: { [key: string]: string[] } = {
+  "Merkez": [
+    "Ortakapı Mahallesi",
+    "Atatürk Mahallesi",
+    "Bahçelievler Mahallesi",
+    "Bayrampaşa Mahallesi",
+    "Bülbül Mahallesi",
+    "Cevriye Mahallesi",
+    "Cumhuriyet Mahallesi",
+    "Fevzi Çakmak Mahallesi",
+    "Halitpaşa Mahallesi",
+    "İstasyon Mahallesi",
+    "Kale İçi Mahallesi",
+    "Karadağ Mahallesi",
+    "Kazım Karabekir Mahallesi",
+    "Örnek Mahallesi",
+    "Paşaçayırı Mahallesi",
+    "Sukapı Mahallesi",
+    "Şehitler Mahallesi",
+    "Yeni Mahalle",
+    "Yenişehir Mahallesi"
+  ],
+  "Kağızman": ["Şahindere Mahallesi", "Toprakkale Mahallesi", "Bilekli Mahallesi", "Şehitler Mahallesi"],
+  "Sarıkamış": ["Tepe Mahallesi", "Eski Sanayi Mahallesi", "İnönü Mahallesi", "Yeni Mahalle"],
+  "Digor": ["Merkez Mahallesi"],
+  "Selim": ["Çarşı Mahallesi", "Cumhuriyet Mahallesi"],
+  "Akyaka": ["Boyuntaş Mahallesi", "Karakale Mahallesi"],
+  "Arpaçay": ["Yalınkaya Mahallesi", "Merkez Mahallesi"],
+  "Susuz": ["İnönü Mahallesi", "Cumhuriyet Mahallesi"]
+};
+
 export default function Home() {
   const router = useRouter();
 
@@ -64,14 +108,21 @@ export default function Home() {
   const [profileName, setProfileName] = useState("Misafir");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Sepet Çekmecesi (Drawer) State'i
+  // Sepet Çekmecesi State'i
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
-  // Sipariş Modalı State'i
+  // Sipariş Modalı ve Adres State'leri
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
+
+  // Parça Parça Adres Bilgileri
+  const [selectedCity, setSelectedCity] = useState("Kars");
+  const [selectedDistrict, setSelectedDistrict] = useState("Merkez");
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState("Ortakapı Mahallesi");
+  const [streetAddress, setStreetAddress] = useState(""); // Sokak / Cadde
+  const [buildingDetails, setBuildingDetails] = useState(""); // Bina No / Daire No / Tarif
+
   const [paymentMethod, setPaymentMethod] = useState("Kapıda Nakit");
   const [submitting, setSubmitting] = useState(false);
 
@@ -213,6 +264,28 @@ export default function Home() {
     setIsModalOpen(true);
   };
 
+  // İl Değiştiğinde İlçe ve Mahalleri Sıfırla
+  const handleCityChange = (city: string) => {
+    setSelectedCity(city);
+    if (city === "Kars") {
+      setSelectedDistrict("Merkez");
+      setSelectedNeighborhood("Ortakapı Mahallesi");
+    } else {
+      setSelectedDistrict("Merkez / İlçe");
+      setSelectedNeighborhood("");
+    }
+  };
+
+  // İlçe Değiştiğinde Mahalleleri Güncelle
+  const handleDistrictChange = (district: string) => {
+    setSelectedDistrict(district);
+    if (selectedCity === "Kars" && KARS_ILCELERI[district]) {
+      setSelectedNeighborhood(KARS_ILCELERI[district][0] || "");
+    } else {
+      setSelectedNeighborhood("");
+    }
+  };
+
   const handleCompleteOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -221,10 +294,13 @@ export default function Home() {
       return;
     }
 
-    if (!customerName || !customerPhone || !deliveryAddress) {
-      alert("Lütfen isim, telefon ve adres alanlarını doldurun.");
+    if (!customerName || !customerPhone || !streetAddress) {
+      alert("Lütfen ad, telefon, sokak ve adres bilgilerini eksiksiz doldurun.");
       return;
     }
+
+    // Parça parça alınan adresleri birleştirip teslimat adresi yapıyoruz
+    const fullDeliveryAddress = `${selectedCity} / ${selectedDistrict} / ${selectedNeighborhood} - ${streetAddress} ${buildingDetails ? `(${buildingDetails})` : ""}`;
 
     setSubmitting(true);
 
@@ -235,7 +311,7 @@ export default function Home() {
           user_id: currentUser.id,
           customer_name: customerName,
           customer_phone: customerPhone,
-          delivery_address: deliveryAddress,
+          delivery_address: fullDeliveryAddress,
           payment_method: paymentMethod,
           total_amount: cartTotal,
           status: "bekliyor",
@@ -283,7 +359,6 @@ export default function Home() {
       <header className="bg-[#ff1773] text-white pt-6 pb-8 px-4 md:px-8 shadow-md">
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
-            {/* Sol Üst Logo ve Profil Adı */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-slate-900/40 border border-white/20 flex items-center justify-center font-black text-[11px] text-pink-100 uppercase tracking-widest">
                 PASHA
@@ -295,9 +370,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Sağ Üst Butonlar (Yönetim, Sepetim, Giriş/Çıkış) */}
             <div className="flex items-center gap-2">
-              {/* 🛒 SEPETİM BUTONU */}
               <button
                 onClick={() => setIsCartDrawerOpen(true)}
                 className="relative bg-white text-[#ff1773] hover:bg-slate-100 text-xs font-black px-4 py-2 rounded-full transition shadow-md flex items-center gap-1.5"
@@ -364,7 +437,6 @@ export default function Home() {
               </button>
             )}
 
-            {/* 🎯 OTOMATİK ÖNERİ PANELİ (DROPDOWN) */}
             {isSearchOpen && searchTerm.trim().length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-slate-800">
                 <div className="p-3 border-b border-slate-100 text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 bg-slate-50/50">
@@ -424,7 +496,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Silik Yönetici Giriş Linki */}
           <div className="text-[10px] text-pink-100/80 pt-0.5">
             <Link href="/admin" className="hover:underline">Yönetici Girişi</Link>
           </div>
@@ -432,7 +503,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 -mt-4 space-y-6">
-        {/* 2. ÖNE ÇIKAN RESTORAN KARTI */}
+        {/* ÖNE ÇIKAN RESTORAN KARTI */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
           <div className="relative h-64 sm:h-80 md:h-96 bg-slate-950 overflow-hidden">
             <img
@@ -441,8 +512,7 @@ export default function Home() {
               className="w-full h-full object-cover object-center opacity-90 transition duration-500 hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
-            
-            {/* ÜCRETSİZ TESLİMAT ROZETİ */}
+
             <div className="absolute top-5 left-5 bg-[#ff1773] text-white text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
               ÜCRETSİZ TESLİMAT
             </div>
@@ -455,7 +525,6 @@ export default function Home() {
                 </h1>
               </div>
 
-              {/* Puan Rozeti */}
               <div className="flex items-center gap-1.5 bg-white/95 text-slate-900 px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg">
                 <Star className="w-4 h-4 text-slate-900 fill-slate-900" />
                 <span>4.8</span>
@@ -471,7 +540,7 @@ export default function Home() {
                 <Phone className="w-3.5 h-3.5 text-[#ff1773]" /> 0474 212 10 15
               </p>
               <p className="flex items-center gap-1.5 truncate">
-                <MapPin className="w-3.5 h-3.5 text-[#ff1773] shrink-0" /> Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95
+                <MapPin className="w-3.5 h-3.5 text-[#ff1773]" /> Ortakapı Mah. Gazi Ahmet Muhtar Paşa Cad. No: 95
               </p>
               <p className="flex items-center gap-1.5 text-slate-500">
                 <Clock className="w-3.5 h-3.5 text-[#ff1773]" /> 25-35 dk • Min. sipariş 100,00 ₺
@@ -480,7 +549,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 3. 🔥 ÇOK SATANLAR BÖLÜMÜ */}
+        {/* ÇOK SATANLAR BÖLÜMÜ */}
         {!searchTerm && (
           <section className="space-y-3">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
@@ -526,7 +595,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* 4. KATEGORİ SEKMELERİ */}
+        {/* KATEGORİ SEKMELERİ */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
@@ -555,7 +624,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* 5. ÜRÜN IZGARASI (GRID LAYOUT) */}
+          {/* ÜRÜN IZGARASI */}
           {loading ? (
             <div className="text-center py-12 text-xs text-slate-400 font-bold">Menü Yükleniyor...</div>
           ) : filteredProducts.length === 0 ? (
@@ -573,7 +642,6 @@ export default function Home() {
                     key={product.id}
                     className="bg-white rounded-2xl border border-slate-200/80 p-2.5 flex flex-col justify-between shadow-sm hover:shadow-md transition relative group"
                   >
-                    {/* Favori Kalp İkonu */}
                     <button
                       onClick={() => toggleFavorite(product.id)}
                       className="absolute top-4 right-4 z-10 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 transition shadow-sm"
@@ -581,7 +649,6 @@ export default function Home() {
                       <Heart className={`w-4 h-4 ${isFav ? "text-red-500 fill-red-500" : ""}`} />
                     </button>
 
-                    {/* Tıklanınca Ürün Detayına Gitme Alanı */}
                     <div
                       onClick={() => router.push(`/product/${product.id}`)}
                       className="cursor-pointer"
@@ -642,7 +709,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* 6. ALT PEMBE SEPET YÜZEN BAR */}
+      {/* ALT PEMBE SEPET YÜZEN BAR */}
       {cart.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-6xl mx-auto bg-[#ff1773] text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between z-40 border border-pink-400/30">
           <div>
@@ -658,11 +725,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🛒 SAĞDAN AÇILAN SEPET ÇEKMECESİ (DRAWER) */}
+      {/* SAĞDAN AÇILAN SEPET ÇEKMECESİ */}
       {isCartDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between relative animation-slide-left">
-            {/* Çekmece Header */}
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-[#ff1773]" />
@@ -676,7 +742,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Çekmece Ürün Listesi */}
             <div className="flex-1 overflow-y-auto p-5 divide-y divide-slate-100">
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-3 text-slate-400 py-12">
@@ -708,7 +773,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Adet Değiştirme */}
                     <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
                       <button
                         onClick={() => removeFromCart(item.product.id)}
@@ -729,7 +793,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Çekmece Footer & Siparişe Geç Butonu */}
             {cart.length > 0 && (
               <div className="p-5 border-t border-slate-100 bg-slate-50/80 space-y-3">
                 <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
@@ -759,10 +822,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* SİPARİŞ TAMAMLAMA MODALI */}
+      {/* 🏡 YENİ PARÇA PARÇA ADRESLİ SİPARİŞ MODALI */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800 border border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative text-slate-800 border border-slate-100 my-8">
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1"
@@ -771,43 +834,129 @@ export default function Home() {
             </button>
 
             <h2 className="text-lg font-black text-[#ff1773] flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5" /> Sipariş Bilgileri
+              <ShoppingBag className="w-5 h-5" /> Sipariş & Adres Bilgileri
             </h2>
 
             <form onSubmit={handleCompleteOrder} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-600 mb-1">Adınız Soyadınız</label>
-                <input
-                  type="text"
-                  required
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-[#ff1773]"
-                />
+              {/* İsim & Telefon */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1">Ad Soyad</label>
+                  <input
+                    type="text"
+                    required
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-[#ff1773]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-600 mb-1">Telefon</label>
+                  <input
+                    type="tel"
+                    required
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-[#ff1773]"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-600 mb-1">Telefon Numaranız</label>
-                <input
-                  type="tel"
-                  required
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-[#ff1773]"
-                />
+              {/* 📍 ADRES SEÇİM ALANI (PARÇA PARÇA) */}
+              <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                <p className="font-extrabold text-[#ff1773] flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                  <MapPin className="w-3.5 h-3.5" /> Teslimat Adresi
+                </p>
+
+                {/* 1. İL SEÇİMİ */}
+                <div>
+                  <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">1. İl Seçin</label>
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                  >
+                    {IL_LISTESI.map((il) => (
+                      <option key={il} value={il}>{il}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. İLÇE SEÇİMİ */}
+                <div>
+                  <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">2. İlçe Seçin</label>
+                  {selectedCity === "Kars" ? (
+                    <select
+                      value={selectedDistrict}
+                      onChange={(e) => handleDistrictChange(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                    >
+                      {Object.keys(KARS_ILCELERI).map((ilce) => (
+                        <option key={ilce} value={ilce}>{ilce}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="İlçe adını yazın"
+                      value={selectedDistrict}
+                      onChange={(e) => setSelectedDistrict(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                    />
+                  )}
+                </div>
+
+                {/* 3. MAHALLE SEÇİMİ */}
+                <div>
+                  <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">3. Mahalle Seçin</label>
+                  {selectedCity === "Kars" && KARS_ILCELERI[selectedDistrict] ? (
+                    <select
+                      value={selectedNeighborhood}
+                      onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                    >
+                      {KARS_ILCELERI[selectedDistrict].map((mah) => (
+                        <option key={mah} value={mah}>{mah}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Mahalle adını yazın"
+                      value={selectedNeighborhood}
+                      onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                    />
+                  )}
+                </div>
+
+                {/* 4. CADDE / SOKAK */}
+                <div>
+                  <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">4. Cadde / Sokak</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Örn: Gazi Ahmet Muhtar Paşa Cad."
+                    value={streetAddress}
+                    onChange={(e) => setStreetAddress(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                  />
+                </div>
+
+                {/* 5. BİNA NO / D AİRE / TARİF */}
+                <div>
+                  <label className="block font-semibold text-slate-500 mb-0.5 text-[11px]">5. Bina No / Daire No / Adres Tarifi</label>
+                  <input
+                    type="text"
+                    placeholder="Örn: No: 95 Kat: 2 Daire: 4 (Eczane üstü)"
+                    value={buildingDetails}
+                    onChange={(e) => setBuildingDetails(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-[#ff1773]"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-600 mb-1">Teslimat Adresiniz</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-[#ff1773] resize-none"
-                />
-              </div>
-
+              {/* Ödeme Yöntemi */}
               <div>
                 <label className="block font-bold text-slate-600 mb-1">Ödeme Yöntemi</label>
                 <select
@@ -820,6 +969,7 @@ export default function Home() {
                 </select>
               </div>
 
+              {/* Sipariş Toplamı & Tamamlama */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-slate-400">Toplam Tutar</p>
